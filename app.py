@@ -428,7 +428,7 @@ VOCABULARY_DATA = {
             'explanation': 'Iridescent means showing luminous colors that seem to change when seen from different angles.'
         },
         {
-            'sentence': 'The hornbill's ________ casque makes it easy to identify.',
+            'sentence': 'The hornbill has a  ________ casque makes it easy to identify.',
             'answer': 'distinctive',
             'explanation': 'Distinctive means having a quality that makes something recognizably different from others.'
         },
@@ -438,7 +438,7 @@ VOCABULARY_DATA = {
             'explanation': 'Seed dispersal is the movement of seeds away from the parent plant.'
         },
         {
-            'sentence': 'The bird's ________ shape allows it to fly with minimal resistance.',
+            'sentence': 'The bird has an ________ shape allows it to fly with minimal resistance.',
             'answer': 'aerodynamic',
             'explanation': 'Aerodynamic means having a shape that reduces the drag from air moving past.'
         },
