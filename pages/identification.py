@@ -1,3 +1,4 @@
+# identification.py
 import streamlit as st
 import random
 from pages.data import SPECIES_DATA
@@ -75,7 +76,7 @@ def show():
                         
             return  # Exit the function early
     
-    # Regular identification flow when not all species have been seen
+    # Continue with regular identification activity
     with col2:
         # Ensure index is valid
         if st.session_state.current_species_index >= len(species_list):
@@ -89,7 +90,7 @@ def show():
         except Exception as e:
             st.error(f"Could not load image: {species['image']}")
             st.image("https://via.placeholder.com/400x300?text=Wildlife+Image", use_container_width=True)
-              
+        
         # Create a shuffled version of options if not already in session state
         option_key = f"shuffled_options_{st.session_state.pathway}_{st.session_state.current_species_index}"
         if option_key not in st.session_state:
@@ -118,22 +119,27 @@ def show():
         with col_b:
             # Next button
             if st.button("Next Species"):
+                # Mark current species as seen
+                st.session_state.species_seen.add(st.session_state.current_species_index)
                 st.session_state.answer_checked = False
-                # Move to the next species
-                st.session_state.current_species_index = (st.session_state.current_species_index + 1) % len(species_list)
+                
+                # Find the next unseen species
+                unseen_indices = [i for i in range(len(species_list)) if i not in st.session_state.species_seen]
+                
+                if unseen_indices:
+                    # If there are unseen species, show one of them
+                    st.session_state.current_species_index = random.choice(unseen_indices)
+                else:
+                    # If all species have been seen, just increment
+                    st.session_state.current_species_index = (st.session_state.current_species_index + 1) % len(species_list)
+                
                 st.rerun()
         
         # Display fact box if answer has been checked
         if st.session_state.answer_checked:
             st.info(f"**Fact about the {species['name']}:** {species['fact']}")
         
-        # Display score
+        # Display score and progress
         st.success(f"Your score: {st.session_state.correct_answers}/{st.session_state.total_questions}")
-
-         # After checking the answer, add this species to the "seen" set
-        if st.session_state.answer_checked:
-            st.session_state.species_seen.add(st.session_state.current_species_index)
-            
-        # Add a progress indicator
         st.progress(len(st.session_state.species_seen) / len(species_list))
         st.text(f"Progress: {len(st.session_state.species_seen)}/{len(species_list)} species identified")
