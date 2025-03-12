@@ -1,5 +1,7 @@
+# grammar.py
 import streamlit as st
 import random
+from pages.data import GRAMMAR_EXERCISES
 
 def show():
     st.title("📝 Grammar Practice: 'To Be' Verb Forms")
@@ -13,9 +15,6 @@ def show():
         st.session_state.grammar_answers = []
     if 'grammar_submitted' not in st.session_state:
         st.session_state.grammar_submitted = False
-    
-    # Import data from data module
-    from pages.data import GRAMMAR_EXERCISES
     
     col1, col2 = st.columns([1, 3])
     
@@ -68,36 +67,45 @@ def show():
             
             # Display current sentence arrangement
             current_sentence = " ".join(st.session_state.grammar_answers[i])
-            st.text_area("Current sentence:", current_sentence, height=50, key=f"sentence_{i}", disabled=True)
+            st.text(f"Current sentence: {current_sentence}")
             
-            # Words with move buttons
+            # Display words with move buttons
             st.markdown("**Arrange the words:**")
             
-            # Create a container for word buttons
-            word_cols = st.columns(len(st.session_state.grammar_answers[i]))
+            # Create columns for word buttons
+            word_count = len(st.session_state.grammar_answers[i])
+            cols_per_row = min(6, word_count)
+            rows_needed = (word_count + cols_per_row - 1) // cols_per_row
             
-            for j, word in enumerate(st.session_state.grammar_answers[i]):
-                with word_cols[j]:
-                    st.markdown(f"**{word}**")
-                    
-                    # Left/right buttons
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if j > 0:  # Can't move first word left
-                            if st.button("⬅️", key=f"left_{i}_{j}"):
-                                # Swap with word to the left
-                                words = st.session_state.grammar_answers[i]
-                                words[j], words[j-1] = words[j-1], words[j]
-                                st.session_state.grammar_answers[i] = words
-                                st.rerun()
-                    with col2:
-                        if j < len(st.session_state.grammar_answers[i]) - 1:  # Can't move last word right
-                            if st.button("➡️", key=f"right_{i}_{j}"):
-                                # Swap with word to the right
-                                words = st.session_state.grammar_answers[i]
-                                words[j], words[j+1] = words[j+1], words[j]
-                                st.session_state.grammar_answers[i] = words
-                                st.rerun()
+            # Display words in multiple rows if needed
+            for row in range(rows_needed):
+                start_idx = row * cols_per_row
+                end_idx = min(start_idx + cols_per_row, word_count)
+                
+                word_cols = st.columns(end_idx - start_idx)
+                
+                for col_idx, j in enumerate(range(start_idx, end_idx)):
+                    word = st.session_state.grammar_answers[i][j]
+                    with word_cols[col_idx]:
+                        st.markdown(f"**{word}**")
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if j > 0:  # Can't move first word left
+                                if st.button("⬅️", key=f"left_{i}_{j}"):
+                                    # Swap with word to the left
+                                    words = st.session_state.grammar_answers[i]
+                                    words[j], words[j-1] = words[j-1], words[j]
+                                    st.session_state.grammar_answers[i] = words
+                                    st.rerun()
+                        with col2:
+                            if j < len(st.session_state.grammar_answers[i]) - 1:  # Can't move last word right
+                                if st.button("➡️", key=f"right_{i}_{j}"):
+                                    # Swap with word to the right
+                                    words = st.session_state.grammar_answers[i]
+                                    words[j], words[j+1] = words[j+1], words[j]
+                                    st.session_state.grammar_answers[i] = words
+                                    st.rerun()
             
             # Check if the sentence is correct
             user_sentence = " ".join(st.session_state.grammar_answers[i])
