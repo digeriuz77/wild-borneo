@@ -705,7 +705,7 @@ def show_identification():
                  on_change=lambda: setattr(st.session_state, 'pathway', st.session_state.pathway_radio))
     
     with col2:
-    species_list = SPECIES_DATA[st.session_state.pathway]
+        species_list = SPECIES_DATA[st.session_state.pathway]
     
     # Ensure current_species_index is valid
     if st.session_state.current_species_index >= len(species_list):
