@@ -49,5 +49,18 @@ elif st.session_state.active_section == "reading":
 elif st.session_state.active_section == "grammar":
     import pages.grammar as module
 
+# Add this to app.py
+
+# Hide default Streamlit menu items
+st.markdown("""
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+.stDeployButton {display:none;}
+[data-testid="stSidebarNav"] {display: none;}
+</style>
+""", unsafe_allow_html=True)
+
 # Show the current module
 module.show()
