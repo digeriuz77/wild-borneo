@@ -690,7 +690,7 @@ WORD_BANK = {
 
 # Welcome Page
 def show_welcome():
-    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Mount_Kinabalu_from_Kampung_Kiau.jpg/1920px-Mount_Kinabalu_from_Kampung_Kiau.jpg", use_column_width=True)
+    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Mount_Kinabalu_from_Kampung_Kiau.jpg/1920px-Mount_Kinabalu_from_Kampung_Kiau.jpg", use_container_width=True)
     
     st.title("🌴 Borneo Wildlife Explorer 🌴")
     st.markdown("### Welcome to your wildlife learning adventure!")
@@ -750,7 +750,7 @@ def show_identification():
     species_index = SPECIES_DATA[st.session_state.pathway].index(species)
     
     st.title(f"🔍 Identify the {st.session_state.pathway.rstrip('s')}!")
-    st.image(species['image'], use_column_width=True)
+    st.image(species['image'], use_container_width=True)
     
     # Multiple choice options
     answer = st.radio("What species is this?", species['options'], key="species_selection")
