@@ -704,8 +704,8 @@ def show_identification():
                  index=0 if st.session_state.pathway == 'birds' else 1,
                  on_change=lambda: setattr(st.session_state, 'pathway', st.session_state.pathway_radio))
     
-    with col2:
-        species_list = SPECIES_DATA[st.session_state.pathway]
+with col2:
+    species_list = SPECIES_DATA[st.session_state.pathway]
     
     # Ensure current_species_index is valid
     if st.session_state.current_species_index >= len(species_list):
@@ -721,18 +721,20 @@ def show_identification():
         st.info("Using placeholder image")
         st.image("https://via.placeholder.com/400x300?text=Wildlife+Image", use_container_width=True)
     
-    # Store the correct answer
-    correct_answer = species['name']
+    # Create a unique key for this question's options
+    option_key = f"shuffled_options_{st.session_state.pathway}_{st.session_state.current_species_index}"
     
-    # Create a shuffled version of options if not already in session state
-    option_key = f"shuffled_options_{st.session_state.current_species_index}"
-    if option_key not in st.session_state or not st.session_state.answer_checked:
+    # Only create shuffled options if they don't exist yet for this question
+    if option_key not in st.session_state:
         shuffled_options = species['options'].copy()
         random.shuffle(shuffled_options)
         st.session_state[option_key] = shuffled_options
     
-    # Multiple choice question with shuffled options
+    # Multiple choice question with stored shuffled options
     answer = st.radio("What species is this?", st.session_state[option_key], key="species_radio")
+    
+    # Store the correct answer
+    correct_answer = species['name']
     
     col_a, col_b = st.columns(2)
     
@@ -781,7 +783,6 @@ def show_identification():
         if st.button("Continue to Reading & Comprehension", use_container_width=True):
             st.session_state.active_section = "comprehension"
             st.rerun()
-            
 # Reading comprehension activity
 def show_comprehension():
     st.title(f"📚 Reading & Comprehension: {st.session_state.pathway.title()}")
