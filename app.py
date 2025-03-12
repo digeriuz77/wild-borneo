@@ -797,9 +797,10 @@ def show_identification():
             </div>
             """, unsafe_allow_html=True)
     else:
-    # Next button
-    if st.button("Next Species", key="next_species_button"):
-        st.session_state.answer_checked = False
+
+# Next button
+if st.button("Next Species", key="next_species_button"):
+    st.session_state.answer_checked = False
     
     # Check if all species have been shown
     if len(st.session_state.species_done) >= len(species_list):
