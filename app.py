@@ -704,7 +704,7 @@ def show_identification():
                  index=0 if st.session_state.pathway == 'birds' else 1,
                  on_change=lambda: setattr(st.session_state, 'pathway', st.session_state.pathway_radio))
     
-with col2:
+    with col2:
     species_list = SPECIES_DATA[st.session_state.pathway]
     
     # Ensure current_species_index is valid
