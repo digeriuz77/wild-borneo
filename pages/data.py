@@ -287,6 +287,7 @@ COMPREHENSION_DATA = {
 }
 
 # Reading speed text
+# Reading speed text with additional content
 READING_SPEED_TEXT = [
     "Brunei's tropical rainforests are home to an astonishing variety of wildlife.",
     "The country's commitment to forest preservation has made it a sanctuary for many species.",
@@ -307,5 +308,29 @@ READING_SPEED_TEXT = [
     "Brunei's rivers teem with life, including the fearsome saltwater crocodile.",
     "These ancient reptiles can grow to enormous sizes in the undisturbed waterways.",
     "Colorful butterflies add splashes of color to the forest.",
-    "Protected species have distinctive patterns with large wingspans."
+    "Protected species have distinctive patterns with large wingspans.",
+    "Orangutans, though rare in Brunei, occasionally appear in the remote forests.",
+    "These intelligent great apes build nests each night in different locations.",
+    "Conservation efforts in Brunei focus on preserving these diverse habitats.",
+    "Nearly 70% of the country remains covered in pristine primary forest.",
+    "This commitment to conservation ensures that Brunei's wildlife will continue to thrive.",
+    "Ecotourism provides opportunities to observe these animals in their natural settings.",
+    "Guided tours along rivers and through forests offer glimpses of this spectacular biodiversity.",
+    "Responsible tourism practices help protect these delicate ecosystems for future generations.",
+    "Research programs monitor wildlife populations and habitat health in Brunei.",
+    "Scientists use camera traps and field surveys to track elusive species.",
+    "Climate change poses new challenges for Brunei's wildlife conservation efforts.",
+    "Rising temperatures and changing rainfall patterns affect breeding cycles and food availability.",
+    "Community involvement is essential for successful wildlife protection.",
+    "Local knowledge and traditional practices often complement scientific approaches.",
+    "Education programs in schools raise awareness about Brunei's natural heritage.",
+    "Children learn about the importance of protecting wildlife and their habitats.",
+    "The government has established several protected areas and wildlife sanctuaries.",
+    "These protected zones restrict hunting and provide safe havens for many species.",
+    "International cooperation helps address cross-border conservation challenges.",
+    "Brunei works with Malaysia and Indonesia on initiatives to protect shared wildlife.",
+    "Sustainable forestry practices aim to balance economic needs with conservation.",
+    "Selective logging allows forests to regenerate while providing timber resources.",
+    "Brunei's wetlands are recognized internationally for their ecological importance.",
+    "They serve as critical stopover points for migratory birds along the East Asian-Australasian Flyway."
 ]
