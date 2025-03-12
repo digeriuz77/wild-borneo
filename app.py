@@ -56,6 +56,7 @@ st.markdown("""
         padding: 1rem;
         margin: 1rem 0;
         border-radius: 0 10px 10px 0;
+        color: #333333;;
     }
     .word-bank {
         background-color: #e8f5e9;
