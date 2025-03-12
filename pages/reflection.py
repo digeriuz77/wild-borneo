@@ -189,7 +189,7 @@ def show_reflective_writing(animal_type):
                 st.info("Consider adding more details about the appearance, behavior, and your feelings to make your reflection more vivid.")
             
             # Option to save or download reflection (placeholder)
-            st.info("In a full implementation, you could add functionality to save this reflection to a database or allow students to download their work.")
+            st.info("Copy your writing into your exercise book, so you can show your teacher at school. Well done!")
 
 if __name__ == "__main__":
     show()
