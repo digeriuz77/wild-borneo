@@ -686,10 +686,9 @@ def show_home():
         
         st.markdown("Choose an activity on the left. Why not start with identification?")
         
-# Button to go straight to identification
-if st.button("Start Identification Activity", use_container_width=True):
-        st.session_state.active_section = "identification"
-        st.rerun()
+        if st.button("Start Identification Activity", use_container_width=True):
+            st.session_state.active_section = "identification"
+            st.rerun()
 
 # Species identification activity
 def show_identification():
