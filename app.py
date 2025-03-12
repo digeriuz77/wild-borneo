@@ -705,60 +705,83 @@ def show_identification():
                  on_change=lambda: setattr(st.session_state, 'pathway', st.session_state.pathway_radio))
     
     with col2:
-        species_list = SPECIES_DATA[st.session_state.pathway]
+    species_list = SPECIES_DATA[st.session_state.pathway]
+    
+    # Ensure current_species_index is valid
+    if st.session_state.current_species_index >= len(species_list):
+        st.session_state.current_species_index = 0
+    
+    species = species_list[st.session_state.current_species_index]
+    
+    # Display the species image
+    try:
+        st.image(species['image'], use_container_width=True)
+    except Exception as e:
+        st.error(f"Could not load image: {species['image']}")
+        st.info("Using placeholder image")
+        st.image("https://via.placeholder.com/400x300?text=Wildlife+Image", use_container_width=True)
+    
+    # Store the correct answer
+    correct_answer = species['name']
+    
+    # Create a shuffled version of options if not already in session state
+    option_key = f"shuffled_options_{st.session_state.current_species_index}"
+    if option_key not in st.session_state or not st.session_state.answer_checked:
+        shuffled_options = species['options'].copy()
+        random.shuffle(shuffled_options)
+        st.session_state[option_key] = shuffled_options
+    
+    # Multiple choice question with shuffled options
+    answer = st.radio("What species is this?", st.session_state[option_key], key="species_radio")
+    
+    col_a, col_b = st.columns(2)
+    
+    with col_a:
+        # Check answer button
+        if not st.session_state.answer_checked:
+            if st.button("Check Answer", key="check_button"):
+                st.session_state.answer_checked = True
+                st.session_state.total_questions += 1
+                
+                if answer == correct_answer:
+                    st.session_state.correct_answers += 1
+                    st.success("✅ Correct! Well done!")
+                else:
+                    st.error(f"❌ Not quite. This is a {correct_answer}.")
+    
+    with col_b:
+        # Next button (always visible)
+        if st.button("Next Species", key="next_button"):
+            st.session_state.answer_checked = False
+            # Move to the next species
+            st.session_state.current_species_index = (st.session_state.current_species_index + 1) % len(species_list)
+            st.rerun()
+    
+    # Display fact box if answer has been checked
+    if st.session_state.answer_checked:
+        st.markdown(f"""
+        <div class="fact-box">
+            <h3>📚 Fact about the {species['name']}</h3>
+            <p>{species['fact']}</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Display score
+    st.info(f"Your score: {st.session_state.correct_answers}/{st.session_state.total_questions}")
+    
+    # Check if all species have been shown
+    total_species = len(species_list)
+    species_seen = min(st.session_state.total_questions, total_species)
+    
+    # Show completion message and button when all species have been seen
+    if species_seen >= total_species:
+        st.success(f"You've completed all {total_species} {st.session_state.pathway}! Great job!")
         
-        # Ensure current_species_index is valid
-        if st.session_state.current_species_index >= len(species_list):
-            st.session_state.current_species_index = 0
-        
-        species = species_list[st.session_state.current_species_index]
-        
-        # Display the species image
-        try:
-            st.image(species['image'], use_container_width=True)
-        except Exception as e:
-            st.error(f"Could not load image: {species['image']}")
-            st.info("Using placeholder image")
-            st.image("https://via.placeholder.com/400x300?text=Wildlife+Image", use_container_width=True)
-        
-        # Multiple choice question
-        answer = st.radio("What species is this?", species['options'], key="species_radio")
-        
-        col_a, col_b = st.columns(2)
-        
-        with col_a:
-            # Check answer button
-            if not st.session_state.answer_checked:
-                if st.button("Check Answer", key="check_button"):
-                    st.session_state.answer_checked = True
-                    st.session_state.total_questions += 1
-                    
-                    if answer == species['name']:
-                        st.session_state.correct_answers += 1
-                        st.success("✅ Correct! Well done!")
-                    else:
-                        st.error(f"❌ Not quite. This is a {species['name']}.")
-        
-        with col_b:
-            # Next button (always visible)
-            if st.button("Next Species", key="next_button"):
-                st.session_state.answer_checked = False
-                # Move to the next species
-                st.session_state.current_species_index = (st.session_state.current_species_index + 1) % len(species_list)
-                st.rerun()
-        
-        # Display fact box if answer has been checked
-        if st.session_state.answer_checked:
-            st.markdown(f"""
-            <div class="fact-box">
-                <h3>📚 Fact about the {species['name']}</h3>
-                <p>{species['fact']}</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # Display score
-        st.info(f"Your score: {st.session_state.correct_answers}/{st.session_state.total_questions}")
-
+        # Button to move to the next activity
+        if st.button("Continue to Reading & Comprehension", use_container_width=True):
+            st.session_state.active_section = "comprehension"
+            st.rerun()
+            
 # Reading comprehension activity
 def show_comprehension():
     st.title(f"📚 Reading & Comprehension: {st.session_state.pathway.title()}")
