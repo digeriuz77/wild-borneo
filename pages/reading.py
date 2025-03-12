@@ -70,10 +70,27 @@ def show_comprehension():
         
         # Display the reading passage with a scrollable container
         st.markdown(f"""
-        <div style="max-height: 300px; overflow-y: auto; padding: 15px; border-radius: 10px; background-color: #f5f5f5; max-width: 100%; word-wrap: break-word;">
+        <div style="max-height: 300px; overflow-y: auto; padding: 15px; border-radius: 10px; background-color: #f5f5f5; max-width: 100%; word-wrap: break-word; white-space: normal;">
             <h3>Reading Passage</h3>
             {data['text']}
         </div>
+        <style>
+            /* Custom scrollbar styling */
+            div::-webkit-scrollbar {{
+                width: 8px;
+            }}
+            div::-webkit-scrollbar-track {{
+            background: #f1f1f1;
+            border-radius: 10px;
+            }}
+            div::-webkit-scrollbar-thumb {{
+            background: #888;
+            border-radius: 10px;
+            }}
+            div::-webkit-scrollbar-thumb:hover {{
+            background: #555;
+            }}
+        </style>
         """, unsafe_allow_html=True)
         
         # Comprehension questions
