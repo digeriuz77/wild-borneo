@@ -127,9 +127,15 @@ def choose_pathway(pathway):
 
 def next_species():
     if len(st.session_state.species_done) >= len(SPECIES_DATA[st.session_state.pathway]):
-        go_to_page('comprehension')
+        st.session_state.page = 'comprehension'
     else:
         st.session_state.page = 'identification'
+    
+    # Add this to clear any potentially problematic state
+    if 'submitted' in st.session_state:
+        del st.session_state.submitted
+    if 'answer_checked' in st.session_state:
+        del st.session_state.answer_checked
 
 def check_progress():
     total_steps = 5
@@ -755,15 +761,36 @@ def show_identification():
     # Multiple choice options
     answer = st.radio("What species is this?", species['options'], key="species_selection")
     
-    # Check answer button
-    if st.button("Check my answer"):
-        st.session_state.total_questions += 1
-        
-        if answer == species['name']:
-            st.session_state.correct_answers += 1
-            st.success("✅ Correct! Well done!")
-        else:
-            st.error(f"❌ Not quite. This is a {species['name']}.")
+   # Split the answer checking and navigation into separate blocks
+if st.button("Check my answer", key="check_answer_btn"):
+    st.session_state.answer_checked = True
+    st.session_state.total_questions += 1
+    
+    if answer == species['name']:
+        st.session_state.correct_answers += 1
+        st.success("✅ Correct! Well done!")
+    else:
+        st.error(f"❌ Not quite. This is a {species['name']}.")
+    
+    # Add to completed species
+    if species_index not in st.session_state.species_done:
+        st.session_state.species_done.append(species_index)
+    
+    # Display fact box
+    st.markdown(f"""
+    <div class="fact-box">
+        <h3>📚 Fact about the {species['name']}</h3>
+        <p>{species['fact']}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Only show next button after checking answer
+if 'answer_checked' in st.session_state and st.session_state.answer_checked:
+    if st.button("Next", key="next_species_btn"):
+        st.session_state.answer_checked = False
+        next_species()
+        # This forces a rerun to ensure the page changes
+        st.rerun()
         
         # Display fact box
         st.markdown(f"""
