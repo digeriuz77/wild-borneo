@@ -70,7 +70,7 @@ def show_comprehension():
         
         # Display the reading passage with a scrollable container
         st.markdown(f"""
-        <div style="max-height: 300px; overflow-y: auto; padding: 15px; border-radius: 10px; background-color: #f5f5f5;">
+        <div style="max-height: 300px; overflow-y: auto; padding: 15px; border-radius: 10px; background-color: #f5f5f5; max-width: 100%; word-wrap: break-word;">
             <h3>Reading Passage</h3>
             {data['text']}
         </div>
