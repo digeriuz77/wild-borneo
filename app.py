@@ -684,16 +684,12 @@ def show_home():
         5. ✏️ **Creative Reflection**
         """)
         
-        st.markdown("### Choose your learning pathway:")
+        st.markdown("Choose an activity on the left. Why not start with identification?")
         
-        col_a, col_b = st.columns(2)
-        with col_a:
-            if st.button("🦜 Birds", use_container_width=True):
-                st.session_state.pathway = 'birds'
-        
-        with col_b:
-            if st.button("🐵 Monkeys", use_container_width=True):
-                st.session_state.pathway = 'monkeys'
+# Button to go straight to identification
+if st.button("Start Identification Activity", use_container_width=True):
+        st.session_state.active_section = "identification"
+        st.rerun()
 
 # Species identification activity
 def show_identification():
