@@ -1,8 +1,9 @@
 import streamlit as st
 import random
-from PIL import Image
-import re
 import base64
+import re
+from PIL import Image
+import os
 
 # Set page configuration
 st.set_page_config(
@@ -12,16 +13,11 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better mobile experience and visual appeal
+# Custom CSS for better visual appeal
 st.markdown("""
 <style>
     .main {
         padding: 1rem;
-    }
-    .block-container {
-        max-width: 1000px;
-        padding-top: 2rem;
-        padding-bottom: 2rem;
     }
     h1, h2, h3 {
         color: #2e7d32;
@@ -35,14 +31,13 @@ st.markdown("""
         font-weight: bold;
         border: none;
         margin: 0.5rem 0;
-        width: 100%;
     }
     .stButton button:hover {
         background-color: #2e7d32;
     }
     .wildlife-card {
         background-color: #f5f5f5;
-        border-radius: 10px;
+        border-radius: L10px;
         padding: 1rem;
         margin: 1rem 0;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
@@ -68,74 +63,38 @@ st.markdown("""
         padding: 1rem;
         margin: 1rem 0;
     }
-    .stRadio > label {
-        font-weight: bold;
-    }
-    .progress-tracker {
-        background-color: #e8f5e9;
-        border-radius: 10px;
-        padding: 1rem;
-        margin: 1rem 0;
-        text-align: center;
-    }
-    .annotated {
-        display: inline;
-        border-radius: 0.25rem;
-        padding: 0.125rem 0.25rem;
-        margin: 0 0.125rem;
-        background-color: #bbdefb;
-    }
-    .sidebar .sidebar-content {
-        background-color: #f1f8e9;
-    }
-    .sidebar-nav {
-        padding: 0.5rem;
-        margin-bottom: 0.5rem;
-        border-radius: 5px;
-        transition: background-color 0.3s;
-    }
-    .sidebar-nav:hover {
-        background-color: #c5e1a5;
-        cursor: pointer;
-    }
-    .sidebar-nav-active {
-        background-color: #aed581;
-        font-weight: bold;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # Initialize session state variables if they don't exist
 if 'pathway' not in st.session_state:
-    st.session_state.pathway = None
+    st.session_state.pathway = 'birds'  # Default pathway
+if 'current_species_index' not in st.session_state:
+    st.session_state.current_species_index = 0
+if 'answer_checked' not in st.session_state:
+    st.session_state.answer_checked = False
 if 'correct_answers' not in st.session_state:
     st.session_state.correct_answers = 0
 if 'total_questions' not in st.session_state:
     st.session_state.total_questions = 0
-if 'current_species_index' not in st.session_state:
-    st.session_state.current_species_index = 0
-if 'species_done' not in st.session_state:
-    st.session_state.species_done = set()
-if 'current_activity' not in st.session_state:
-    st.session_state.current_activity = 'welcome'
 if 'comprehension_difficulty' not in st.session_state:
     st.session_state.comprehension_difficulty = 'easy'
+if 'comprehension_submitted' not in st.session_state:
+    st.session_state.comprehension_submitted = False
+if 'vocab_submitted' not in st.session_state:
+    st.session_state.vocab_submitted = False
+if 'vocabulary_answers' not in st.session_state:
+    st.session_state.vocabulary_answers = {}
 if 'paragraph_level' not in st.session_state:
     st.session_state.paragraph_level = 'easy'
 if 'paragraph_version' not in st.session_state:
     st.session_state.paragraph_version = 0
-if 'paragraph_attempts' not in st.session_state:
-    st.session_state.paragraph_attempts = 0
-if 'vocabulary_answers' not in st.session_state:
-    st.session_state.vocabulary_answers = {}
-if 'vocab_submitted' not in st.session_state:
-    st.session_state.vocab_submitted = False
-if 'comprehension_submitted' not in st.session_state:
-    st.session_state.comprehension_submitted = False
+if 'shuffled_sentences' not in st.session_state:
+    st.session_state.shuffled_sentences = []
 if 'reflection_text' not in st.session_state:
     st.session_state.reflection_text = ""
-if 'answer_checked' not in st.session_state:
-    st.session_state.answer_checked = False
+if 'active_section' not in st.session_state:
+    st.session_state.active_section = "home"
 
 # Species data using local images
 SPECIES_DATA = {
@@ -667,477 +626,6 @@ WORD_BANK = {
     }
 }
 
-def set_activity(activity):
-    """Change the current activity in the session state."""
-    st.session_state.current_activity = activity
-
-def choose_pathway(pathway):
-    """Set the learning pathway in the session state."""
-    st.session_state.pathway = pathway
-    st.session_state.species_done = set()
-    st.session_state.current_species_index = 0
-    st.session_state.correct_answers = 0
-    st.session_state.total_questions = 0
-    st.session_state.answer_checked = False
-    
-    # Move to identification activity
-    set_activity('identification')
-
-def check_progress():
-    """Calculate the overall progress in the learning journey."""
-    total_activities = 5
-    completed_activities = 0
-    
-    if st.session_state.pathway:
-        completed_activities += 1
-    
-    if len(st.session_state.species_done) == len(SPECIES_DATA[st.session_state.pathway or 'birds']):
-        completed_activities += 1
-        
-    if st.session_state.current_activity == 'vocabulary' and st.session_state.vocab_submitted:
-        completed_activities += 1
-        
-    if st.session_state.current_activity == 'paragraph' and st.session_state.paragraph_attempts > 0:
-        completed_activities += 1
-        
-    if st.session_state.current_activity in ['reflection', 'completion']:
-        completed_activities += 1
-        
-    return completed_activities, total_activities
-
-def show_pathway_selection():
-    """Display the pathway selection screen."""
-    st.title("🌴 Borneo Wildlife Explorer 🌴")
-    st.markdown("### Welcome to your wildlife learning adventure!")
-    
-    try:
-        col1, col2 = st.columns([3, 2])
-        with col1:
-            st.image("images/Brahminy_kite.jpg", use_container_width=True)
-            st.image("images/Proboscis_Monkey_in_Borneo.jpg", use_container_width=True)
-        
-        with col2:
-            st.markdown("""
-            During this activity, you'll learn about the fascinating wildlife of Borneo through:
-            1. 🔍 **Wildlife Identification**
-            2. 📚 **Reading & Comprehension**
-            3. 📝 **Vocabulary Building**
-            4. 🧩 **Paragraph Organization**
-            5. ✏️ **Creative Reflection**
-            """)
-            
-            st.markdown("### Choose your learning pathway:")
-            
-            if st.button("🦜 Learn about Birds", use_container_width=True):
-                choose_pathway('birds')
-            
-            if st.button("🐵 Learn about Monkeys", use_container_width=True):
-                choose_pathway('monkeys')
-    except Exception as e:
-        st.error(f"Error loading images: {e}")
-        st.markdown("### Choose your learning pathway:")
-        
-        if st.button("🦜 Learn about Birds", use_container_width=True):
-            choose_pathway('birds')
-        
-        if st.button("🐵 Learn about Monkeys", use_container_width=True):
-            choose_pathway('monkeys')
-
-def show_identification():
-    """Display the species identification activity."""
-    if not st.session_state.pathway:
-        set_activity('welcome')
-        return
-    
-    if len(st.session_state.species_done) >= len(SPECIES_DATA[st.session_state.pathway]):
-        # All species have been shown, move to next activity
-        set_activity('comprehension')
-        return
-    
-    # Get the current species based on index
-    species_list = SPECIES_DATA[st.session_state.pathway]
-    
-    if st.session_state.current_species_index >= len(species_list):
-        st.session_state.current_species_index = 0
-    
-    species = species_list[st.session_state.current_species_index]
-    
-    st.title(f"🔍 Identify the {st.session_state.pathway.rstrip('s')}!")
-    
-    try:
-        st.image(species['image'], use_container_width=True)
-    except Exception as e:
-        st.error(f"Could not load image ({species['image']}): {e}")
-        st.info("Using placeholder image instead")
-        st.image("https://via.placeholder.com/400x300?text=Wildlife+Image", use_container_width=True)
-    
-    # Multiple choice options
-    answer = st.radio("What species is this?", species['options'], key="species_selection")
-    
-    # Check answer button
-    if not st.session_state.answer_checked:
-        if st.button("Check my answer", key="check_answer_button"):
-            st.session_state.total_questions += 1
-            st.session_state.answer_checked = True
-            
-            if answer == species['name']:
-                st.session_state.correct_answers += 1
-                st.success("✅ Correct! Well done!")
-            else:
-                st.error(f"❌ Not quite. This is a {species['name']}.")
-            
-            # Add to completed species
-            st.session_state.species_done.add(st.session_state.current_species_index)
-            
-            # Display fact box
-            st.markdown(f"""
-            <div class="fact-box">
-                <h3>📚 Fact about the {species['name']}</h3>
-                <p>{species['fact']}</p>
-            </div>
-            """, unsafe_allow_html=True)
-    else:
-        # Next button
-        if st.button("Next Species", key="next_species_button"):
-            st.session_state.answer_checked = False
-            
-            # Check if all species have been shown
-            if len(st.session_state.species_done) >= len(species_list):
-                # All species seen, move to next activity
-                set_activity('comprehension')
-            else:
-                # Find the next species that hasn't been shown yet
-                next_index = (st.session_state.current_species_index + 1) % len(species_list)
-                attempts = 0
-                max_attempts = len(species_list)
-                
-                while next_index in st.session_state.species_done and attempts < max_attempts:
-                    next_index = (next_index + 1) % len(species_list)
-                    attempts += 1
-                
-                st.session_state.current_species_index = next_index
-            
-            st.rerun()
-
-def show_comprehension():
-    """Display the reading comprehension activity."""
-    if not st.session_state.pathway:
-        set_activity('welcome')
-        return
-    
-    st.title(f"📝 Reading About {st.session_state.pathway.title()}")
-    
-    # Difficulty selector
-    difficulty = st.select_slider(
-        "Select difficulty level:",
-        options=['easy', 'medium', 'hard'],
-        value=st.session_state.comprehension_difficulty
-    )
-    
-    # Update difficulty if changed
-    if difficulty != st.session_state.comprehension_difficulty:
-        st.session_state.comprehension_difficulty = difficulty
-        st.session_state.comprehension_submitted = False
-    
-    data = COMPREHENSION_DATA[st.session_state.pathway][st.session_state.comprehension_difficulty]
-    
-    # Display the reading passage with highlighted vocabulary
-    st.markdown("""
-    <div class="wildlife-card">
-        <h3>Reading Passage</h3>
-        {}
-    </div>
-    """.format(data['text']), unsafe_allow_html=True)
-    
-    # Comprehension questions
-    st.subheader("Comprehension Check")
-    correct_answers = 0
-    total_questions = len(data['questions'])
-    
-    for i, q in enumerate(data['questions']):
-        answer = st.radio(q['question'], q['options'], key=f"comprehension_{i}")
-        
-        if st.session_state.comprehension_submitted:
-            if answer == q['answer']:
-                st.success("✅ Correct!")
-                correct_answers += 1
-            else:
-                st.error(f"❌ The correct answer is: {q['answer']}")
-    
-    # Submit button
-    if not st.session_state.comprehension_submitted:
-        if st.button("Check my answers", key="check_comprehension"):
-            st.session_state.comprehension_submitted = True
-            st.rerun()
-    else:
-        # Display score with appropriate feedback
-        score_percentage = (correct_answers / total_questions) * 100
-        
-        if score_percentage >= 80:
-            st.success(f"**Great job! Score: {correct_answers}/{total_questions} ({score_percentage:.0f}%)**")
-            if difficulty != 'hard':
-                st.info(f"Ready for a challenge? Try the {['medium', 'hard'][difficulty == 'medium']} difficulty!")
-        elif score_percentage >= 60:
-            st.info(f"**Good effort! Score: {correct_answers}/{total_questions} ({score_percentage:.0f}%)**")
-        else:
-            st.warning(f"**Score: {correct_answers}/{total_questions} ({score_percentage:.0f}%). Keep practicing!**")
-            if difficulty != 'easy':
-                st.info(f"Try the {['easy', 'medium'][difficulty == 'hard']} difficulty to build your skills.")
-        
-        if st.button("Continue to Vocabulary Activity", key="to_vocabulary"):
-            st.session_state.comprehension_submitted = False
-            set_activity('vocabulary')
-
-def show_vocabulary():
-    """Display the vocabulary activity."""
-    if not st.session_state.pathway:
-        set_activity('welcome')
-        return
-    
-    st.title(f"📝 Vocabulary Challenge: {st.session_state.pathway.title()}")
-    
-    data = VOCABULARY_DATA[st.session_state.pathway]
-    
-    st.markdown("""
-    Fill in the blanks with the correct vocabulary word.
-    Type the exact word or phrase that fits in each sentence.
-    """)
-    
-    # Create text inputs for each sentence
-    for i, item in enumerate(data):
-        st.markdown(f"**{i+1}. {item['sentence']}**")
-        key = f"vocab_{i}"
-        
-        # Initialize if not exists
-        if key not in st.session_state.vocabulary_answers:
-            st.session_state.vocabulary_answers[key] = ""
-        
-        st.session_state.vocabulary_answers[key] = st.text_input(
-            "", 
-            value=st.session_state.vocabulary_answers[key],
-            key=key,
-            disabled=st.session_state.vocab_submitted
-        )
-    
-    # Check answers button
-    if not st.session_state.vocab_submitted:
-        if st.button("Check my answers", key="check_vocab"):
-            st.session_state.vocab_submitted = True
-            st.rerun()
-    else:
-        # Display results
-        correct_count = 0
-        
-        for i, item in enumerate(data):
-            user_answer = st.session_state.vocabulary_answers[f"vocab_{i}"].strip().lower()
-            correct = user_answer == item['answer'].lower()
-            
-            if correct:
-                correct_count += 1
-                st.markdown(f"**{i+1}.** ✅ Correct!")
-            else:
-                st.markdown(f"**{i+1}.** ❌ The correct answer is: **{item['answer']}**")
-            
-            st.markdown(f"<div class='fact-box'><p><strong>Explanation:</strong> {item['explanation']}</p></div>", unsafe_allow_html=True)
-        
-        st.markdown(f"**Your score: {correct_count}/{len(data)}**")
-        
-        if st.button("Continue to Paragraph Challenge", key="to_paragraph"):
-            set_activity('paragraph')
-
-def show_paragraph():
-    """Display the paragraph organization challenge."""
-    if not st.session_state.pathway:
-        set_activity('welcome')
-        return
-    
-    st.title("🧩 Paragraph Organization Challenge")
-    
-    # Choose difficulty level
-    level = st.selectbox("Select difficulty:", 
-                        ["easy", "medium", "hard"], 
-                        index=["easy", "medium", "hard"].index(st.session_state.paragraph_level))
-    
-    if level != st.session_state.paragraph_level:
-        st.session_state.paragraph_level = level
-        st.session_state.paragraph_version = random.randint(0, len(PARAGRAPH_DATA[st.session_state.pathway][level])-1)
-        st.session_state.paragraph_attempts = 0
-    
-    # Get paragraph data
-    paragraph_set = PARAGRAPH_DATA[st.session_state.pathway][level]
-    if st.session_state.paragraph_version >= len(paragraph_set):
-        st.session_state.paragraph_version = 0
-    
-    paragraph = paragraph_set[st.session_state.paragraph_version]
-    
-    st.markdown("""
-    Arrange these sentences to form a logical paragraph. Use the "Move Up" and "Move Down" buttons to reorder them.
-    """)
-    
-    # Initialize shuffled sentences if needed
-    if 'shuffled_sentences' not in st.session_state or st.session_state.paragraph_attempts == 0:
-        st.session_state.shuffled_sentences = paragraph['sentences'].copy()
-        random.shuffle(st.session_state.shuffled_sentences)
-    
-    # Display each sentence with up/down buttons
-    for i, sentence in enumerate(st.session_state.shuffled_sentences):
-        col1, col2, col3 = st.columns([8, 1, 1])
-        
-        with col1:
-            st.text_input(f"Sentence {i+1}", sentence, key=f"sentence_{i}", disabled=True)
-        
-        with col2:
-            if i > 0:  # Can't move the first sentence up
-                if st.button("⬆️", key=f"up_{i}"):
-                    st.session_state.shuffled_sentences[i], st.session_state.shuffled_sentences[i-1] = \
-                        st.session_state.shuffled_sentences[i-1], st.session_state.shuffled_sentences[i]
-                    st.rerun()
-        
-        with col3:
-            if i < len(st.session_state.shuffled_sentences) - 1:  # Can't move the last sentence down
-                if st.button("⬇️", key=f"down_{i}"):
-                    st.session_state.shuffled_sentences[i], st.session_state.shuffled_sentences[i+1] = \
-                        st.session_state.shuffled_sentences[i+1], st.session_state.shuffled_sentences[i]
-                    st.rerun()
-    
-    # Check answer
-    if st.button("Check my paragraph", key="check_paragraph"):
-        correct = st.session_state.shuffled_sentences == paragraph['sentences']
-        st.session_state.paragraph_attempts += 1
-        
-        if correct:
-            st.success("✅ Perfect! Your paragraph is in the correct order.")
-            
-            if st.button("Continue to Reflection", key="to_reflection"):
-                set_activity('reflection')
-        else:
-            st.error("❌ Not quite right. The sentences aren't in the correct order yet.")
-            
-            # Give hint after multiple attempts
-            if st.session_state.paragraph_attempts >= 2:
-                st.info("Hint: Look for transition words that show sequence or logical connections.")
-            
-            # Option to see answer after multiple attempts
-            if st.session_state.paragraph_attempts >= 3:
-                if st.button("Show me the correct order", key="show_answer"):
-                    st.markdown("**Correct paragraph order:**")
-                    for i, sentence in enumerate(paragraph['sentences']):
-                        st.markdown(f"{i+1}. {sentence}")
-    
-    # Option to try a different paragraph
-    if st.button("Try a different paragraph", key="new_paragraph"):
-        st.session_state.paragraph_version = (st.session_state.paragraph_version + 1) % len(paragraph_set)
-        st.session_state.paragraph_attempts = 0
-        if 'shuffled_sentences' in st.session_state:
-            del st.session_state.shuffled_sentences
-        st.rerun()
-
-def show_reflection():
-    """Display the reflective writing activity."""
-    if not st.session_state.pathway:
-        set_activity('welcome')
-        return
-    
-    st.title("✏️ Reflective Writing")
-    
-    st.markdown(f"""
-    ### Remembering {st.session_state.pathway.title()} I've Seen
-    
-    Write a short reflection about your experiences with {st.session_state.pathway} in Borneo.
-    You can use the word bank below for inspiration.
-    """)
-    
-    # Word bank
-    word_bank = WORD_BANK[st.session_state.pathway]
-    
-    st.markdown("""
-    <div class="word-bank">
-        <h4>Word Bank</h4>
-        <p><strong>Emotion words:</strong> {}</p>
-        <p><strong>Descriptive words:</strong> {}</p>
-    </div>
-    """.format(", ".join(word_bank['emotion']), ", ".join(word_bank['descriptive'])), unsafe_allow_html=True)
-    
-    # Sentence starters
-    st.markdown("""
-    <div class="word-bank">
-        <h4>Sentence Starters</h4>
-        <ul>
-            <li>I saw a...</li>
-            <li>I felt... when...</li>
-            <li>The most interesting thing was...</li>
-            <li>I learned that...</li>
-            <li>I wonder why...</li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Text area for writing
-    reflection = st.text_area("Your reflection (150 words max):", 
-                              height=200, 
-                              key="reflection_textarea",
-                              value=st.session_state.reflection_text)
-    
-    # Save reflection to session state
-    st.session_state.reflection_text = reflection
-    
-    # Word count
-    word_count = len(reflection.split())
-    st.text(f"Word count: {word_count}/150")
-    
-    # Save button
-    if st.button("Save my reflection", key="save_reflection"):
-        st.success("Your reflection has been saved!")
-    
-    # Download button
-    if reflection:
-        download_text = f"""My Reflection on Borneo {st.session_state.pathway.title()}\n\n{reflection}"""
-        
-        download_button_str = download_button(download_text, f"my_{st.session_state.pathway}_reflection.txt", "Download my reflection")
-        st.markdown(download_button_str, unsafe_allow_html=True)
-    
-    if st.button("Complete my learning journey", key="complete_journey"):
-        set_activity('completion')
-
-def show_completion():
-    """Display the completion page."""
-    st.balloons()
-    
-    st.title("🎉 Congratulations!")
-    
-    if not st.session_state.pathway:
-        st.markdown("You've explored the Borneo Wildlife Explorer app!")
-        if st.button("Start a learning journey", key="start_journey"):
-            set_activity('welcome')
-        return
-    
-    st.markdown(f"""
-    ### You've completed your learning journey about Borneo's {st.session_state.pathway}!
-    
-    Here's what you accomplished:
-    
-    * Identified different species of {st.session_state.pathway}
-    * Completed reading comprehension and vocabulary activities
-    * Organized paragraphs to improve your understanding
-    * Reflected on your experiences with {st.session_state.pathway}
-    
-    Your final score: {st.session_state.correct_answers}/{st.session_state.total_questions} correct answers
-    """)
-    
-    if st.button("Start a new learning journey", key="new_journey"):
-        # Reset state
-        st.session_state.pathway = None
-        st.session_state.current_activity = 'welcome'
-        st.session_state.species_done = set()
-        st.session_state.current_species_index = 0
-        st.session_state.correct_answers = 0
-        st.session_state.total_questions = 0
-        st.session_state.answer_checked = False
-        st.session_state.vocab_submitted = False
-        st.session_state.comprehension_submitted = False
-        st.session_state.reflection_text = ""
-        st.rerun()
-
 # Helper function for download button
 def download_button(object_to_download, download_filename, button_text):
     """
@@ -1172,77 +660,475 @@ def download_button(object_to_download, download_filename, button_text):
     dl_link = custom_css + f'<a download="{download_filename}" id="{button_id}" href="data:text/plain;base64,{b64}">{button_text}</a><br>'
     return dl_link
 
+# Home/Welcome page
+def show_home():
+    st.title("🌴 Borneo Wildlife Explorer 🌴")
+    st.markdown("### Welcome to your wildlife learning adventure!")
+    
+    col1, col2 = st.columns([3, 2])
+    
+    try:
+        with col1:
+            st.image("images/Brahminy_kite.jpg", use_container_width=True)
+            st.image("images/Proboscis_Monkey_in_Borneo.jpg", use_container_width=True)
+    except Exception as e:
+        st.warning(f"Could not load images. Please make sure the image files are in the correct location.")
+    
+    with col2:
+        st.markdown("""
+        During this activity, you'll learn about the fascinating wildlife of Borneo through:
+        1. 🔍 **Wildlife Identification**
+        2. 📚 **Reading & Comprehension**
+        3. 📝 **Vocabulary Building**
+        4. 🧩 **Paragraph Organization**
+        5. ✏️ **Creative Reflection**
+        """)
+        
+        st.markdown("### Choose your learning pathway:")
+        
+        col_a, col_b = st.columns(2)
+        with col_a:
+            if st.button("🦜 Birds", use_container_width=True):
+                st.session_state.pathway = 'birds'
+        
+        with col_b:
+            if st.button("🐵 Monkeys", use_container_width=True):
+                st.session_state.pathway = 'monkeys'
+
+# Species identification activity
+def show_identification():
+    st.title(f"🔍 Identify the {st.session_state.pathway.rstrip('s')}!")
+    
+    col1, col2 = st.columns([1, 3])
+    
+    with col1:
+        st.radio("Select your learning pathway:", 
+                 ['birds', 'monkeys'], 
+                 key="pathway_radio",
+                 index=0 if st.session_state.pathway == 'birds' else 1,
+                 on_change=lambda: setattr(st.session_state, 'pathway', st.session_state.pathway_radio))
+    
+    with col2:
+        species_list = SPECIES_DATA[st.session_state.pathway]
+        
+        # Ensure current_species_index is valid
+        if st.session_state.current_species_index >= len(species_list):
+            st.session_state.current_species_index = 0
+        
+        species = species_list[st.session_state.current_species_index]
+        
+        # Display the species image
+        try:
+            st.image(species['image'], use_container_width=True)
+        except Exception as e:
+            st.error(f"Could not load image: {species['image']}")
+            st.info("Using placeholder image")
+            st.image("https://via.placeholder.com/400x300?text=Wildlife+Image", use_container_width=True)
+        
+        # Multiple choice question
+        answer = st.radio("What species is this?", species['options'], key="species_radio")
+        
+        col_a, col_b = st.columns(2)
+        
+        with col_a:
+            # Check answer button
+            if not st.session_state.answer_checked:
+                if st.button("Check Answer", key="check_button"):
+                    st.session_state.answer_checked = True
+                    st.session_state.total_questions += 1
+                    
+                    if answer == species['name']:
+                        st.session_state.correct_answers += 1
+                        st.success("✅ Correct! Well done!")
+                    else:
+                        st.error(f"❌ Not quite. This is a {species['name']}.")
+        
+        with col_b:
+            # Next button (always visible)
+            if st.button("Next Species", key="next_button"):
+                st.session_state.answer_checked = False
+                # Move to the next species
+                st.session_state.current_species_index = (st.session_state.current_species_index + 1) % len(species_list)
+                st.rerun()
+        
+        # Display fact box if answer has been checked
+        if st.session_state.answer_checked:
+            st.markdown(f"""
+            <div class="fact-box">
+                <h3>📚 Fact about the {species['name']}</h3>
+                <p>{species['fact']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Display score
+        st.info(f"Your score: {st.session_state.correct_answers}/{st.session_state.total_questions}")
+
+# Reading comprehension activity
+def show_comprehension():
+    st.title(f"📚 Reading & Comprehension: {st.session_state.pathway.title()}")
+    
+    col1, col2 = st.columns([1, 3])
+    
+    with col1:
+        st.radio("Select your learning pathway:", 
+                 ['birds', 'monkeys'], 
+                 key="pathway_comp",
+                 index=0 if st.session_state.pathway == 'birds' else 1,
+                 on_change=lambda: setattr(st.session_state, 'pathway', st.session_state.pathway_comp))
+        
+        # Difficulty selector
+        st.session_state.comprehension_difficulty = st.radio(
+            "Select difficulty:",
+            options=['easy', 'medium', 'hard'],
+            index=['easy', 'medium', 'hard'].index(st.session_state.comprehension_difficulty)
+        )
+    
+    with col2:
+        data = COMPREHENSION_DATA[st.session_state.pathway][st.session_state.comprehension_difficulty]
+        
+        # Display the reading passage
+        st.markdown("""
+        <div class="wildlife-card">
+            <h3>Reading Passage</h3>
+            {}
+        </div>
+        """.format(data['text']), unsafe_allow_html=True)
+        
+        # Comprehension questions
+        st.subheader("Comprehension Check")
+        
+        correct_answers = 0
+        total_questions = len(data['questions'])
+        
+        for i, q in enumerate(data['questions']):
+            answer = st.radio(q['question'], q['options'], key=f"comp_q_{i}")
+            
+            if st.session_state.comprehension_submitted:
+                if answer == q['answer']:
+                    st.success("✅ Correct!")
+                    correct_answers += 1
+                else:
+                    st.error(f"❌ The correct answer is: {q['answer']}")
+        
+        # Submit button
+        col_a, col_b = st.columns(2)
+        
+        with col_a:
+            if not st.session_state.comprehension_submitted:
+                if st.button("Check Answers", key="check_comp"):
+                    st.session_state.comprehension_submitted = True
+                    st.rerun()
+        
+        with col_b:
+            if st.button("Reset Questions", key="reset_comp"):
+                st.session_state.comprehension_submitted = False
+                st.rerun()
+        
+        # Display score if submitted
+        if st.session_state.comprehension_submitted:
+            score_percentage = (correct_answers / total_questions) * 100
+            
+            if score_percentage >= 80:
+                st.success(f"**Great job! Score: {correct_answers}/{total_questions} ({score_percentage:.0f}%)**")
+                if st.session_state.comprehension_difficulty != 'hard':
+                    st.info(f"Ready for a challenge? Try the {['medium', 'hard'][st.session_state.comprehension_difficulty == 'medium']} difficulty!")
+            elif score_percentage >= 60:
+                st.info(f"**Good effort! Score: {correct_answers}/{total_questions} ({score_percentage:.0f}%)**")
+            else:
+                st.warning(f"**Score: {correct_answers}/{total_questions} ({score_percentage:.0f}%). Keep practicing!**")
+                if st.session_state.comprehension_difficulty != 'easy':
+                    st.info(f"Try the {['easy', 'medium'][st.session_state.comprehension_difficulty == 'hard']} difficulty to build your skills.")
+
+# Vocabulary activity
+def show_vocabulary():
+    st.title(f"📝 Vocabulary Challenge: {st.session_state.pathway.title()}")
+    
+    col1, col2 = st.columns([1, 3])
+    
+    with col1:
+        st.radio("Select your learning pathway:", 
+                 ['birds', 'monkeys'], 
+                 key="pathway_vocab",
+                 index=0 if st.session_state.pathway == 'birds' else 1,
+                 on_change=lambda: setattr(st.session_state, 'pathway', st.session_state.pathway_vocab))
+    
+    with col2:
+        data = VOCABULARY_DATA[st.session_state.pathway]
+        
+        st.markdown("""
+        Fill in the blanks with the correct vocabulary word.
+        Type the exact word or phrase that fits in each sentence.
+        """)
+        
+        # Create text inputs for each sentence
+        for i, item in enumerate(data):
+            st.markdown(f"**{i+1}. {item['sentence']}**")
+            key = f"vocab_{i}"
+            
+            # Initialize if not exists
+            if key not in st.session_state.vocabulary_answers:
+                st.session_state.vocabulary_answers[key] = ""
+            
+            # Create the text input field
+            if not st.session_state.vocab_submitted:
+                st.session_state.vocabulary_answers[key] = st.text_input(
+                    "", 
+                    value=st.session_state.vocabulary_answers.get(key, ""),
+                    key=key
+                )
+            else:
+                st.text_input("", value=st.session_state.vocabulary_answers.get(key, ""), key=key, disabled=True)
+        
+        col_a, col_b = st.columns(2)
+        
+        with col_a:
+            # Check answers button
+            if not st.session_state.vocab_submitted:
+                if st.button("Check Answers", key="check_vocab_btn"):
+                    st.session_state.vocab_submitted = True
+                    st.rerun()
+        
+        with col_b:
+            # Reset button
+            if st.button("Reset Exercise", key="reset_vocab"):
+                st.session_state.vocab_submitted = False
+                st.rerun()
+        
+        # Display results
+        if st.session_state.vocab_submitted:
+            correct_count = 0
+            
+            for i, item in enumerate(data):
+                user_answer = st.session_state.vocabulary_answers.get(f"vocab_{i}", "").strip().lower()
+                correct = user_answer == item['answer'].lower()
+                
+                if correct:
+                    correct_count += 1
+                    st.markdown(f"**{i+1}.** ✅ Correct!")
+                else:
+                    st.markdown(f"**{i+1}.** ❌ The correct answer is: **{item['answer']}**")
+                
+                st.markdown(f"<div class='fact-box'><p><strong>Explanation:</strong> {item['explanation']}</p></div>", unsafe_allow_html=True)
+            
+            st.markdown(f"**Your score: {correct_count}/{len(data)}**")
+
+# Paragraph organization activity
+def show_paragraph():
+    st.title("🧩 Paragraph Organization Challenge")
+    
+    col1, col2 = st.columns([1, 3])
+    
+    with col1:
+        st.radio("Select your learning pathway:", 
+                 ['birds', 'monkeys'], 
+                 key="pathway_para",
+                 index=0 if st.session_state.pathway == 'birds' else 1,
+                 on_change=lambda: setattr(st.session_state, 'pathway', st.session_state.pathway_para))
+        
+        # Choose difficulty level
+        st.session_state.paragraph_level = st.radio(
+            "Select difficulty:", 
+            ["easy", "medium", "hard"],
+            index=["easy", "medium", "hard"].index(st.session_state.paragraph_level)
+        )
+        
+        # Button to get a new paragraph
+        if st.button("New Paragraph", key="new_para"):
+            paragraph_set = PARAGRAPH_DATA[st.session_state.pathway][st.session_state.paragraph_level]
+            st.session_state.paragraph_version = (st.session_state.paragraph_version + 1) % len(paragraph_set)
+            st.session_state.shuffled_sentences = []
+            st.rerun()
+    
+    with col2:
+        # Get paragraph data
+        paragraph_set = PARAGRAPH_DATA[st.session_state.pathway][st.session_state.paragraph_level]
+        if st.session_state.paragraph_version >= len(paragraph_set):
+            st.session_state.paragraph_version = 0
+        
+        paragraph = paragraph_set[st.session_state.paragraph_version]
+        
+        st.markdown("""
+        Arrange these sentences to form a logical paragraph. Use the "Move Up" and "Move Down" buttons to reorder them.
+        """)
+        
+        # Initialize shuffled sentences if needed
+        if not st.session_state.shuffled_sentences:
+            st.session_state.shuffled_sentences = paragraph['sentences'].copy()
+            random.shuffle(st.session_state.shuffled_sentences)
+        
+        # Display each sentence with up/down buttons
+        for i, sentence in enumerate(st.session_state.shuffled_sentences):
+            col_a, col_b, col_c = st.columns([8, 1, 1])
+            
+            with col_a:
+                st.text_input(f"Sentence {i+1}", sentence, key=f"sentence_{i}", disabled=True)
+            
+            with col_b:
+                if i > 0:  # Can't move the first sentence up
+                    if st.button("⬆️", key=f"up_{i}"):
+                        st.session_state.shuffled_sentences[i], st.session_state.shuffled_sentences[i-1] = \
+                            st.session_state.shuffled_sentences[i-1], st.session_state.shuffled_sentences[i]
+                        st.rerun()
+            
+            with col_c:
+                if i < len(st.session_state.shuffled_sentences) - 1:  # Can't move the last sentence down
+                    if st.button("⬇️", key=f"down_{i}"):
+                        st.session_state.shuffled_sentences[i], st.session_state.shuffled_sentences[i+1] = \
+                            st.session_state.shuffled_sentences[i+1], st.session_state.shuffled_sentences[i]
+                        st.rerun()
+        
+        # Check answer button
+        if st.button("Check My Paragraph", key="check_para"):
+            correct = st.session_state.shuffled_sentences == paragraph['sentences']
+            
+            if correct:
+                st.success("✅ Perfect! Your paragraph is in the correct order.")
+            else:
+                st.error("❌ Not quite right. The sentences aren't in the correct order yet.")
+                
+                # Give hint
+                st.info("Hint: Look for transition words that show sequence or logical connections.")
+        
+        # Show correct answer button
+        if st.button("Show Correct Order", key="show_answer"):
+            st.markdown("**Correct paragraph order:**")
+            for i, sentence in enumerate(paragraph['sentences']):
+                st.markdown(f"{i+1}. {sentence}")
+
+# Reflective writing activity
+def show_reflection():
+    st.title("✏️ Reflective Writing")
+    
+    col1, col2 = st.columns([1, 3])
+    
+    with col1:
+        st.radio("Select your learning pathway:", 
+                 ['birds', 'monkeys'], 
+                 key="pathway_refl",
+                 index=0 if st.session_state.pathway == 'birds' else 1,
+                 on_change=lambda: setattr(st.session_state, 'pathway', st.session_state.pathway_refl))
+    
+    with col2:
+        st.markdown(f"""
+        ### Remembering {st.session_state.pathway.title()} I've Seen
+        
+        Write a short reflection about your experiences with {st.session_state.pathway} in Borneo.
+        You can use the word bank below for inspiration.
+        """)
+        
+        # Word bank
+        word_bank = WORD_BANK[st.session_state.pathway]
+        
+        st.markdown("""
+        <div class="word-bank">
+            <h4>Word Bank</h4>
+            <p><strong>Emotion words:</strong> {}</p>
+            <p><strong>Descriptive words:</strong> {}</p>
+        </div>
+        """.format(", ".join(word_bank['emotion']), ", ".join(word_bank['descriptive'])), unsafe_allow_html=True)
+        
+        # Sentence starters
+        st.markdown("""
+        <div class="word-bank">
+            <h4>Sentence Starters</h4>
+            <ul>
+                <li>I saw a...</li>
+                <li>I felt... when...</li>
+                <li>The most interesting thing was...</li>
+                <li>I learned that...</li>
+                <li>I wonder why...</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Text area for writing
+        reflection = st.text_area(
+            "Your reflection (150 words max):", 
+            height=200,
+            value=st.session_state.reflection_text,
+            key="reflection_textarea"
+        )
+        
+        # Save reflection to session state
+        st.session_state.reflection_text = reflection
+        
+        # Word count
+        word_count = len(reflection.split())
+        st.text(f"Word count: {word_count}/150")
+        
+        # Save button
+        if st.button("Save My Reflection", key="save_refl"):
+            st.success("Your reflection has been saved!")
+        
+        # Download button
+        if reflection:
+            download_text = f"""My Reflection on Borneo {st.session_state.pathway.title()}\n\n{reflection}"""
+            download_button_str = download_button(download_text, f"my_{st.session_state.pathway}_reflection.txt", "Download My Reflection")
+            st.markdown(download_button_str, unsafe_allow_html=True)
+
 # Main app
 def main():
     # Sidebar navigation
     st.sidebar.title("Navigation")
     
-    # Progress information
-    if st.session_state.pathway:
-        st.sidebar.markdown(f"### Learning about: {st.session_state.pathway.title()}")
-        completed, total = check_progress()
-        st.sidebar.progress(completed/total)
-        st.sidebar.markdown(f"**Progress:** {completed}/{total} activities")
+    # Simple direct navigation buttons
+    if st.sidebar.button("🏠 Home"):
+        st.session_state.active_section = "home"
     
-    # Navigation options
-    nav_options = [
-        ('welcome', '🏠 Home'),
-        ('identification', '🔍 Identification'),
-        ('comprehension', '📚 Reading & Comprehension'),
-        ('vocabulary', '📝 Vocabulary Challenge'),
-        ('paragraph', '🧩 Paragraph Organization'),
-        ('reflection', '✏️ Reflective Writing')
-    ]
+    if st.sidebar.button("🔍 Identification"):
+        st.session_state.active_section = "identification"
     
-    for activity, label in nav_options:
-        # Only enable activities that are available based on progress
-        disabled = False
-        
-        if activity != 'welcome' and not st.session_state.pathway:
-            disabled = True
-        elif activity == 'identification' and st.session_state.pathway:
-            disabled = False
-        elif activity in ['comprehension', 'vocabulary', 'paragraph', 'reflection'] and not st.session_state.species_done:
-            disabled = True
-        
-        # Determine the button style based on whether it's the current activity
-        button_style = "sidebar-nav sidebar-nav-active" if activity == st.session_state.current_activity else "sidebar-nav"
-        
-        # Create the navigation button
-        button_html = f"""
-        <div class="{button_style}" onclick="{'' if disabled else f"window.location.href='#{activity}'"}">
-            {label} {' (locked)' if disabled else ''}
-        </div>
-        """
-        
-        # Only make button clickable if not disabled
-        if not disabled:
-            if st.sidebar.markdown(button_html, unsafe_allow_html=True):
-                set_activity(activity)
+    if st.sidebar.button("📚 Reading & Comprehension"):
+        st.session_state.active_section = "comprehension"
+    
+    if st.sidebar.button("📝 Vocabulary Challenge"):
+        st.session_state.active_section = "vocabulary"
+    
+    if st.sidebar.button("🧩 Paragraph Organization"):
+        st.session_state.active_section = "paragraph"
+    
+    if st.sidebar.button("✏️ Reflective Writing"):
+        st.session_state.active_section = "reflection"
+    
+    # Score display in sidebar
+    st.sidebar.markdown("---")
+    st.sidebar.markdown(f"**Current pathway:** {st.session_state.pathway.title()}")
+    st.sidebar.markdown(f"**Identification score:** {st.session_state.correct_answers}/{st.session_state.total_questions}")
     
     # Reset button
     st.sidebar.markdown("---")
-    if st.sidebar.button("Reset Progress", key="reset_progress"):
+    if st.sidebar.button("Reset All Progress"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        st.session_state.current_activity = 'welcome'
+        st.session_state.pathway = 'birds'
+        st.session_state.active_section = "home"
+        st.session_state.current_species_index = 0
+        st.session_state.answer_checked = False
+        st.session_state.correct_answers = 0
+        st.session_state.total_questions = 0
+        st.session_state.comprehension_difficulty = 'easy'
+        st.session_state.comprehension_submitted = False
+        st.session_state.vocab_submitted = False
+        st.session_state.vocabulary_answers = {}
+        st.session_state.paragraph_level = 'easy'
+        st.session_state.paragraph_version = 0
+        st.session_state.shuffled_sentences = []
+        st.session_state.reflection_text = ""
         st.rerun()
     
-    # Display the appropriate content based on current activity
-    if st.session_state.current_activity == 'welcome':
-        show_pathway_selection()
-    elif st.session_state.current_activity == 'identification':
+    # Display the selected section
+    if st.session_state.active_section == "home":
+        show_home()
+    elif st.session_state.active_section == "identification":
         show_identification()
-    elif st.session_state.current_activity == 'comprehension':
+    elif st.session_state.active_section == "comprehension":
         show_comprehension()
-    elif st.session_state.current_activity == 'vocabulary':
+    elif st.session_state.active_section == "vocabulary":
         show_vocabulary()
-    elif st.session_state.current_activity == 'paragraph':
+    elif st.session_state.active_section == "paragraph":
         show_paragraph()
-    elif st.session_state.current_activity == 'reflection':
+    elif st.session_state.active_section == "reflection":
         show_reflection()
-    elif st.session_state.current_activity == 'completion':
-        show_completion()
 
 if __name__ == "__main__":
     main()
