@@ -163,4 +163,149 @@ COMPREHENSION_DATA = {
                 {
                     'question': 'What does "iridescent" mean?',
                     'options': ['Shiny and colorful', 'Small and soft', 'Heavy and rough'],
-                    'answer': '
+                    'answer': 'Shiny and colorful'
+                },
+                {
+                    'question': 'What helps kingfishers dive into the water?',
+                    'options': ['Their large wings', 'Their streamlined body', 'Their long tail'],
+                    'answer': 'Their streamlined body'
+                },
+                {
+                    'question': 'What is a "casque" on a hornbill?',
+                    'options': ['Their wing', 'The horn-like structure above their bill', 'Their tail feathers'],
+                    'answer': 'The horn-like structure above their bill'
+                }
+            ]
+        },
+        'hard': {
+            'text': """
+            The avian species of Borneo exhibit remarkable <b>structural coloration</b> in their plumage, creating <b>iridescent</b> effects as light interacts with nanoscale features of their feathers. Unlike pigment-based colors, these <b>photonic structures</b> manipulate light waves through interference, diffraction, and scattering, producing the vibrant hues that serve dual purposes of <b>crypsis</b> in dense understory vegetation or <b>intersexual selection</b> displays.
+            
+            Alcedinidae species (kingfishers) possess extraordinarily <b>hydrodynamic</b> morphology optimized for high-velocity aquatic entry. Their <b>fusiform</b> body profile minimizes drag coefficient during the hunting dive, while specialized <b>cranial kinetics</b> allow precise trajectory adjustments in response to light refraction at the air-water interface, compensating for apparent displacement of prey items.
+            
+            Bucerotidae (hornbills) function as crucial <b>keystone dispersers</b> in forest ecosystems through <b>endozoochory</b> of large-seeded fruits. Their <b>pneumatized</b> casques serve as <b>resonating chambers</b> that amplify vocalizations across long distances in the forest <b>stratification</b>, facilitating both territorial defense and maintenance of pair bonds during nesting periods.
+            """,
+            'questions': [
+                {
+                    'question': 'What creates the iridescent effects in bird plumage?',
+                    'options': ['Chemical pigments', 'Structural coloration', 'Ultraviolet radiation'],
+                    'answer': 'Structural coloration'
+                },
+                {
+                    'question': 'Why do kingfishers need to adjust their trajectory when diving?',
+                    'options': ['To avoid predators', 'To compensate for light refraction', 'To maintain body temperature'],
+                    'answer': 'To compensate for light refraction'
+                },
+                {
+                    'question': 'What is the function of the pneumatized casque in hornbills?',
+                    'options': ['Temperature regulation', 'Storage of fat reserves', 'Resonating chamber for vocalizations'],
+                    'answer': 'Resonating chamber for vocalizations'
+                }
+            ]
+        }
+    },
+    'monkeys': {
+        'easy': {
+            'text': """
+            Monkeys in Borneo live in groups to stay safe. They have leaders who decide where the group goes and who gets food first. They make special sounds to tell each other about danger or where to find food.
+            
+            Most monkeys in Borneo stay in the trees all the time. They have strong arms and legs for climbing and jumping from branch to branch. Some can jump very far without falling.
+            
+            Different types of monkeys eat different foods. Some eat fruits and leaves, while others also eat insects and small animals. This helps them all find enough food in the same forest.
+            """,
+            'questions': [
+                {
+                    'question': 'Why do monkeys in Borneo live in groups?',
+                    'options': ['To stay safe', 'To stay warm', 'To find water'],
+                    'answer': 'To stay safe'
+                },
+                {
+                    'question': 'Where do most Borneo monkeys spend their time?',
+                    'options': ['In the water', 'On the ground', 'In the trees'],
+                    'answer': 'In the trees'
+                },
+                {
+                    'question': 'Why do different monkeys eat different foods?',
+                    'options': ['They are picky eaters', 'So they can all find enough food', 'They have different colored fur'],
+                    'answer': 'So they can all find enough food'
+                }
+            ]
+        },
+        'medium': {
+            'text': """
+            Monkeys in Borneo are <b>highly adaptive</b> creatures that rely on social groups for survival. Living in <b>hierarchical</b> communities, they develop complex social bonds that determine access to food, mates, and safe sleeping sites. Each group has a unique set of vocalizations to communicate danger or food location.
+            
+            Many species are <b>arboreal</b>, spending most of their lives in the trees, rarely coming down to the ground. Their strong limbs allow them to move with amazing <b>agility</b> through the forest canopy, leaping between branches that might be several meters apart.
+            
+            Borneo's monkeys have developed <b>specialized</b> diets that prevent competition for the same food sources. While some are <b>omnivorous</b>, eating both plants and small animals, others are strictly <b>herbivorous</b>, feeding only on leaves, fruits, and flowers from specific trees in their territory.
+            """,
+            'questions': [
+                {
+                    'question': 'What does "arboreal" mean?',
+                    'options': ['Living in the water', 'Living on the ground', 'Living in trees'],
+                    'answer': 'Living in trees'
+                },
+                {
+                    'question': 'What kind of diet do all monkeys in Borneo have?',
+                    'options': ['They all eat the same food', 'They have specialized diets', 'They only eat meat'],
+                    'answer': 'They have specialized diets'
+                },
+                {
+                    'question': 'What does "hierarchical" refer to?',
+                    'options': ['Having ranks or levels', 'Being very tall', 'Having bright colors'],
+                    'answer': 'Having ranks or levels'
+                }
+            ]
+        },
+        'hard': {
+            'text': """
+            Primates of Borneo exhibit remarkable <b>behavioral plasticity</b> and <b>social cognition</b> within their <b>multi-level fission-fusion societies</b>. These <b>conspecific aggregations</b> establish <b>dominance hierarchies</b> governing resource allocation, mate selection, and territorial defense through complex <b>agonistic-affiliative interactions</b>.
+            
+            The predominantly <b>arboreal locomotion</b> of these species has resulted in specialized <b>brachiation adaptations</b> and <b>anatomical preadaptations</b> for efficient <b>three-dimensional navigation</b> within the forest <b>stratification</b>. Their remarkable <b>proprioceptive acuity</b> enables precise trajectory calculation during <b>suspensory progression</b> and <b>quadrumanous climbing</b>.
+            
+            <b>Resource partitioning</b> among sympatric primate species in Borneo demonstrates classic <b>niche differentiation</b> strategies. Some exhibit <b>dietary specialization</b> as <b>folivores</b> with complex <b>foregut fermentation</b> systems, while others are <b>frugivore-insectivores</b> with <b>generalist dentition</b>.
+            """,
+            'questions': [
+                {
+                    'question': 'What term describes the ability of primates to adapt their behavior to different situations?',
+                    'options': ['Social cognition', 'Behavioral plasticity', 'Paralinguistic communication'],
+                    'answer': 'Behavioral plasticity'
+                },
+                {
+                    'question': 'What adaptation allows certain monkey species to swing from branch to branch?',
+                    'options': ['Brachiation adaptations', 'Proprioceptive acuity', 'Quadrumanous climbing'],
+                    'answer': 'Brachiation adaptations'
+                },
+                {
+                    'question': 'What term describes leaf-eating monkeys?',
+                    'options': ['Frugivores', 'Folivores', 'Omnivores'],
+                    'answer': 'Folivores'
+                }
+            ]
+        }
+    }
+}
+
+# Reading speed text
+READING_SPEED_TEXT = [
+    "Brunei's tropical rainforests are home to an astonishing variety of wildlife.",
+    "The country's commitment to forest preservation has made it a sanctuary for many species.",
+    "In the dense canopy, hornbills can be spotted flying between tall emergent trees.",
+    "These magnificent birds are known for their unique nesting habits and loud calls.",
+    "The proboscis monkey, with its distinctive long nose, is endemic to Borneo.",
+    "These endangered primates live in groups near rivers and mangroves.",
+    "They are excellent swimmers and can often be seen crossing rivers in search of food.",
+    "Brunei's mangrove forests support a rich ecosystem of birds, reptiles, and mammals.",
+    "The collared kingfisher hunts among the mangrove roots for small fish and crabs.",
+    "Its bright blue plumage contrasts beautifully with the muddy environment.",
+    "Clouded leopards are Brunei's largest wild cats, though they are rarely seen.",
+    "These secretive predators hunt at night, climbing trees with extraordinary agility.",
+    "The rainforest floor is home to many smaller creatures like the bearded pig.",
+    "These wild pigs play an important role in dispersing seeds throughout the forest.",
+    "Flying lizards can be spotted gliding between trees using their extended ribs.",
+    "These remarkable adaptations allow them to travel up to 30 meters in a single glide.",
+    "Brunei's rivers teem with life, including the fearsome saltwater crocodile.",
+    "These ancient reptiles can grow to enormous sizes in the undisturbed waterways.",
+    "Colorful butterflies add splashes of color to the forest.",
+    "Protected species have distinctive patterns with large wingspans."
+]
