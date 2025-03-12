@@ -4,7 +4,7 @@ def show():
     st.title("Wildlife Poetry")
     
     # Display the image of the Brahminy kite
-    st.image("images/Brahminy_kite.jpg", caption="Brahminy Kite", use_column_width=True)
+    st.image("images/Brahminy_kite.jpg", caption="Brahminy Kite", use_container_width=True)
     
     # Display Tennyson's "The Eagle" poem
     st.subheader("The Eagle by Alfred, Lord Tennyson")
