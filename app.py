@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 from PIL import Image
-from io import BytesIO
+import re
 import base64
 
 # Set page configuration
@@ -9,7 +9,7 @@ st.set_page_config(
     page_title="Borneo Wildlife Explorer",
     page_icon="🌴",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # Custom CSS for better mobile experience and visual appeal
@@ -85,143 +85,116 @@ st.markdown("""
         margin: 0 0.125rem;
         background-color: #bbdefb;
     }
+    .sidebar .sidebar-content {
+        background-color: #f1f8e9;
+    }
+    .sidebar-nav {
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+        border-radius: 5px;
+        transition: background-color 0.3s;
+    }
+    .sidebar-nav:hover {
+        background-color: #c5e1a5;
+        cursor: pointer;
+    }
+    .sidebar-nav-active {
+        background-color: #aed581;
+        font-weight: bold;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # Initialize session state variables if they don't exist
-if 'page' not in st.session_state:
-    st.session_state.page = 'welcome'
 if 'pathway' not in st.session_state:
     st.session_state.pathway = None
 if 'correct_answers' not in st.session_state:
     st.session_state.correct_answers = 0
 if 'total_questions' not in st.session_state:
     st.session_state.total_questions = 0
+if 'current_species_index' not in st.session_state:
+    st.session_state.current_species_index = 0
 if 'species_done' not in st.session_state:
-    st.session_state.species_done = []
-if 'vocab_done' not in st.session_state:
-    st.session_state.vocab_done = False
-if 'comprehension_done' not in st.session_state:
-    st.session_state.comprehension_done = False
+    st.session_state.species_done = set()
+if 'current_activity' not in st.session_state:
+    st.session_state.current_activity = 'welcome'
 if 'comprehension_difficulty' not in st.session_state:
     st.session_state.comprehension_difficulty = 'easy'
 if 'paragraph_level' not in st.session_state:
     st.session_state.paragraph_level = 'easy'
-if 'paragraph_attempts' not in st.session_state:
-    st.session_state.paragraph_attempts = 0
 if 'paragraph_version' not in st.session_state:
     st.session_state.paragraph_version = 0
-if 'reflection' not in st.session_state:
-    st.session_state.reflection = ""
+if 'paragraph_attempts' not in st.session_state:
+    st.session_state.paragraph_attempts = 0
+if 'vocabulary_answers' not in st.session_state:
+    st.session_state.vocabulary_answers = {}
+if 'vocab_submitted' not in st.session_state:
+    st.session_state.vocab_submitted = False
+if 'comprehension_submitted' not in st.session_state:
+    st.session_state.comprehension_submitted = False
+if 'reflection_text' not in st.session_state:
+    st.session_state.reflection_text = ""
+if 'answer_checked' not in st.session_state:
+    st.session_state.answer_checked = False
 
-# Navigation functions
-def go_to_page(page):
-    st.session_state.page = page
-    
-def choose_pathway(pathway):
-    st.session_state.pathway = pathway
-    st.session_state.page = 'identification'
-    st.session_state.species_done = []
-    st.session_state.correct_answers = 0
-    st.session_state.total_questions = 0
-
-def next_species():
-    if len(st.session_state.species_done) >= len(SPECIES_DATA[st.session_state.pathway]):
-        st.session_state.page = 'comprehension'
-    else:
-        st.session_state.page = 'identification'
-    
-    # Add this to clear any potentially problematic state
-    if 'submitted' in st.session_state:
-        del st.session_state.submitted
-    if 'answer_checked' in st.session_state:
-        del st.session_state.answer_checked
-
-def check_progress():
-    total_steps = 5
-    completed_steps = 0
-    
-    if st.session_state.pathway:
-        completed_steps += 1
-    
-    if len(st.session_state.species_done) == len(SPECIES_DATA[st.session_state.pathway or 'birds']):
-        completed_steps += 1
-        
-    if st.session_state.comprehension_done:
-        completed_steps += 1
-        
-    if st.session_state.vocab_done:
-        completed_steps += 1
-        
-    if st.session_state.page == 'reflection' or st.session_state.page == 'completion':
-        completed_steps += 1
-        
-    return completed_steps, total_steps
-
-# Placeholder for species data - this would ideally come from a database
+# Species data using local images
 SPECIES_DATA = {
     'birds': [
         {
-            'name': 'Rhinoceros Hornbill',
-            'image': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/Rhinoceros_Hornbill_%28Buceros_rhinoceros%29_male_-_20090813.jpg/800px-Rhinoceros_Hornbill_%28Buceros_rhinoceros%29_male_-_20090813.jpg',
-            'options': ['Rhinoceros Hornbill', 'Oriental Pied Hornbill', 'Great Hornbill', 'Wreathed Hornbill'],
-            'fact': 'The Rhinoceros Hornbill is one of the largest hornbill species, known for its huge orange and red casque on top of its bill. It plays an important role in seed dispersal in the rainforests of Borneo.'
+            'name': 'Brahminy Kite',
+            'image': 'images/Brahminy_kite.jpg',
+            'options': ['Brahminy Kite', 'Cattle Egret', 'Chestnut Munia Finch', 'Collared Kingfisher'],
+            'fact': 'The Brahminy Kite is a medium-sized bird of prey found in Borneo. With its distinctive reddish-brown plumage and white head, it\'s often seen soaring over coastal areas and wetlands, searching for fish and small animals.'
         },
         {
-            'name': 'Blue-crowned Hanging Parrot',
-            'image': 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Blue-crowned_hanging_parrot_%28Loriculus_galgulus%29_male.jpg/800px-Blue-crowned_hanging_parrot_%28Loriculus_galgulus%29_male.jpg',
-            'options': ['Blue-crowned Hanging Parrot', 'Red-breasted Parakeet', 'Long-tailed Parakeet', 'Blue-naped Parrot'],
-            'fact': 'The tiny Blue-crowned Hanging Parrot gets its name from its habit of sleeping upside-down, hanging from branches. It has bright green plumage with a blue spot on its crown.'
+            'name': 'Cattle Egret',
+            'image': 'images/Cattle_egret.jpg',
+            'options': ['Cattle Egret', 'Brahminy Kite', 'Oriental Pied Hornbill', 'Collared Kingfisher'],
+            'fact': 'The Cattle Egret is a white heron that often follows cattle and other large animals, feeding on insects disturbed by their movement. During breeding season, they develop orange-buff plumage on their head, back, and chest.'
         },
         {
-            'name': 'Bornean Bristlehead',
-            'image': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Bristlehead.jpg/800px-Bristlehead.jpg',
-            'options': ['Bornean Bristlehead', 'Black-and-crimson Pitta', 'Malaysian Rail-babbler', 'Black-headed Bulbul'],
-            'fact': 'The Bornean Bristlehead is an enigmatic and rare bird found only in Borneo. It has distinctive stiff bristle-like feathers on its head and is the only member of its family.'
+            'name': 'Chestnut Munia Finch',
+            'image': 'images/Chestnut_munia_finch.jpg',
+            'options': ['Chestnut Munia Finch', 'Cattle Egret', 'Brahminy Kite', 'Oriental Pied Hornbill'],
+            'fact': 'The Chestnut Munia is a small finch with rich chestnut-brown upperparts and a black face and belly. They live in flocks and feed mainly on grass seeds. Their nests are round, woven structures usually built in tall grass or bushes.'
         },
         {
-            'name': 'Oriental Dwarf Kingfisher',
-            'image': 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Oriental_Dwarf_Kingfisher.jpg/800px-Oriental_Dwarf_Kingfisher.jpg',
-            'options': ['Oriental Dwarf Kingfisher', 'Common Kingfisher', 'Stork-billed Kingfisher', 'Collared Kingfisher'],
-            'fact': 'The Oriental Dwarf Kingfisher, also known as the Three-toed Kingfisher, is one of the smallest kingfishers with incredibly vibrant plumage of orange, purple, blue, and white.'
+            'name': 'Collared Kingfisher',
+            'image': 'images/collared_kingfisher.jpg',
+            'options': ['Collared Kingfisher', 'Brahminy Kite', 'Cattle Egret', 'Chestnut Munia Finch'],
+            'fact': 'The Collared Kingfisher has striking blue and white plumage with a distinctive white collar. Unlike many kingfishers, it doesn\'t only eat fish but feeds on a variety of prey including lizards, crabs, and insects.'
         },
         {
-            'name': 'Crested Fireback',
-            'image': 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Lophura_ignita_-Kuala_Lumpur_Bird_Park-8a.jpg/800px-Lophura_ignita_-Kuala_Lumpur_Bird_Park-8a.jpg',
-            'options': ['Crested Fireback', 'Great Argus', 'Bulwer\'s Pheasant', 'Bornean Peacock-Pheasant'],
-            'fact': 'The Crested Fireback is a pheasant species with a beautiful blue-black plumage, red legs and facial skin, and, as the name suggests, a "fire-colored" back. Males have a tall crest on their heads.'
+            'name': 'Oriental Pied Hornbill',
+            'image': 'images/Oriental_Pied_Hornbill.jpg',
+            'options': ['Oriental Pied Hornbill', 'Brahminy Kite', 'Cattle Egret', 'Chestnut Munia Finch'],
+            'fact': 'The Oriental Pied Hornbill has a distinctive black and white plumage with a large yellow-white bill topped by a casque. During nesting, the female seals herself inside a tree cavity, leaving only a small slit through which the male feeds her.'
         }
     ],
     'monkeys': [
         {
             'name': 'Proboscis Monkey',
-            'image': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Proboscis_Monkey_in_Borneo.jpg/800px-Proboscis_Monkey_in_Borneo.jpg',
-            'options': ['Proboscis Monkey', 'Silvered Leaf Monkey', 'Long-tailed Macaque', 'Maroon Leaf Monkey'],
+            'image': 'images/Proboscis_Monkey_in_Borneo.jpg',
+            'options': ['Proboscis Monkey', 'Macaque Monkey', 'Red Leaf Monkey', 'Silvered Leaf Monkey'],
             'fact': 'The Proboscis Monkey is endemic to Borneo and is known for its distinctive long nose. Males have huge noses that can grow up to 7 inches long, which they use to attract females and amplify their warning calls.'
         },
         {
+            'name': 'Macaque Monkey',
+            'image': 'images/macaque_monkey.jpg',
+            'options': ['Macaque Monkey', 'Proboscis Monkey', 'Red Leaf Monkey', 'Silvered Leaf Monkey'],
+            'fact': 'Macaques are highly adaptable monkeys found throughout Borneo. They live in large social groups with clear hierarchies and are known for their intelligence. They can use tools and solve complex problems to obtain food.'
+        },
+        {
+            'name': 'Red Leaf Monkey',
+            'image': 'images/Red_leaf_monkey.jpg',
+            'options': ['Red Leaf Monkey', 'Proboscis Monkey', 'Macaque Monkey', 'Silvered Leaf Monkey'],
+            'fact': 'The Red Leaf Monkey, also known as the Maroon Langur, has a distinctive dark maroon coat and a long tail. Babies are born with bright orange fur that gradually darkens as they age.'
+        },
+        {
             'name': 'Silvered Leaf Monkey',
-            'image': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/13/Trachypithecus_cristatus_%28Silvery_Lutung%29.jpg/800px-Trachypithecus_cristatus_%28Silvery_Lutung%29.jpg',
-            'options': ['Silvered Leaf Monkey', 'Maroon Leaf Monkey', 'Proboscis Monkey', 'Red Leaf Monkey'],
-            'fact': 'The Silvered Leaf Monkey, also known as the Silvery Lutung, has striking silver-tipped fur and a distinctive crest of hair on top of its head. They live in groups of 9-40 individuals and primarily eat leaves, making them true folivores.'
-        },
-        {
-            'name': 'Maroon Leaf Monkey',
-            'image': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/PB090103b_maroon_sureli_PA.jpg/800px-PB090103b_maroon_sureli_PA.jpg',
-            'options': ['Maroon Leaf Monkey', 'Silvered Leaf Monkey', 'Red Leaf Monkey', 'Banded Leaf Monkey'],
-            'fact': 'The Maroon Leaf Monkey, also known as the Red Leaf Monkey, has a distinctive dark maroon coat and a long tail. Babies are born with bright orange fur that gradually darkens as they age.'
-        },
-        {
-            'name': 'Long-tailed Macaque',
-            'image': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Macaca_fascicularis-01.jpg/800px-Macaca_fascicularis-01.jpg',
-            'options': ['Long-tailed Macaque', 'Pig-tailed Macaque', 'Crab-eating Macaque', 'Stump-tailed Macaque'],
-            'fact': 'The Long-tailed Macaque is one of the most widespread primates in Southeast Asia. It is highly adaptable and can swim well, often diving into water to find crabs and other aquatic food.'
-        },
-        {
-            'name': 'Bornean Gibbon',
-            'image': 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Hylobates_muelleri_-_Tulsa_Zoo.jpg/800px-Hylobates_muelleri_-_Tulsa_Zoo.jpg',
-            'options': ['Bornean Gibbon', 'Agile Gibbon', 'Siamang', 'Lar Gibbon'],
-            'fact': 'The Bornean Gibbon has the impressive ability to swing through the forest canopy at speeds up to 35 mph using its extremely long arms. It is known for its distinctive morning songs that can be heard throughout the forest.'
+            'image': 'images/Silvered_Leaf_Monkey.jpg',
+            'options': ['Silvered Leaf Monkey', 'Red Leaf Monkey', 'Proboscis Monkey', 'Macaque Monkey'],
+            'fact': 'The Silvered Leaf Monkey has striking silver-tipped fur and a distinctive crest of hair on top of its head. They live in groups of 9-40 individuals and primarily eat leaves, making them true folivores.'
         }
     ]
 }
@@ -354,7 +327,7 @@ COMPREHENSION_DATA = {
             'text': """
             Monkeys in Borneo are **highly adaptive** creatures that rely on social groups for survival. Living in **hierarchical** communities, they develop complex social bonds that determine access to food, mates, and safe sleeping sites. Each group has a unique set of vocalizations to communicate danger or food location.
             
-            Many species are **arboreal**, spending most of their lives in the trees, rarely coming down to the ground. Their **prehensile** tails and strong limbs allow them to move with amazing **agility** through the forest canopy, leaping between branches that might be several meters apart.
+            Many species are **arboreal**, spending most of their lives in the trees, rarely coming down to the ground. Their strong limbs allow them to move with amazing **agility** through the forest canopy, leaping between branches that might be several meters apart.
             
             Borneo's monkeys have developed **specialized** diets that prevent competition for the same food sources. While some are **omnivorous**, eating both plants and small animals, others are strictly **herbivorous**, feeding only on leaves, fruits, and flowers from specific trees in their territory.
             """,
@@ -370,14 +343,14 @@ COMPREHENSION_DATA = {
                     'answer': 'They have specialized diets'
                 },
                 {
-                    'question': 'What does "prehensile" refer to?',
-                    'options': ['Ability to grab things', 'Ability to run fast', 'Ability to swim'],
-                    'answer': 'Ability to grab things'
+                    'question': 'What does "hierarchical" refer to?',
+                    'options': ['Having ranks or levels', 'Being very tall', 'Having bright colors'],
+                    'answer': 'Having ranks or levels'
                 },
                 {
-                    'question': 'What type of communities do Bornean monkeys live in?',
-                    'options': ['Random groups', 'Hierarchical communities', 'Solitary territories'],
-                    'answer': 'Hierarchical communities'
+                    'question': 'What helps monkeys move through the forest canopy?',
+                    'options': ['Their agility', 'Their large size', 'Their bright colors'],
+                    'answer': 'Their agility'
                 }
             ]
         },
@@ -411,9 +384,9 @@ COMPREHENSION_DATA = {
                     'answer': 'Niche differentiation'
                 },
                 {
-                    'question': 'Which digestive adaptation is found in leaf-eating monkeys?',
-                    'options': ['Generalist dentition', 'Foregut fermentation', 'Proteolytic enzymes'],
-                    'answer': 'Foregut fermentation'
+                    'question': 'What term describes leaf-eating monkeys?',
+                    'options': ['Frugivores', 'Folivores', 'Omnivores'],
+                    'answer': 'Folivores'
                 }
             ]
         }
@@ -434,7 +407,7 @@ VOCABULARY_DATA = {
             'explanation': 'Iridescent means showing luminous colors that seem to change when seen from different angles.'
         },
         {
-            'sentence': 'The hornbill has a  ________ casque makes it easy to identify.',
+            'sentence': 'The hornbill\'s ________ casque makes it easy to identify.',
             'answer': 'distinctive',
             'explanation': 'Distinctive means having a quality that makes something recognizably different from others.'
         },
@@ -444,7 +417,7 @@ VOCABULARY_DATA = {
             'explanation': 'Seed dispersal is the movement of seeds away from the parent plant.'
         },
         {
-            'sentence': 'The bird has an ________ shape allows it to fly with minimal resistance.',
+            'sentence': 'The bird\'s ________ shape allows it to fly with minimal resistance.',
             'answer': 'aerodynamic',
             'explanation': 'Aerodynamic means having a shape that reduces the drag from air moving past.'
         },
@@ -466,7 +439,7 @@ VOCABULARY_DATA = {
             'explanation': 'Arboreal means living in trees.'
         },
         {
-            'sentence': 'Some monkeys have ________ tails that can grab onto branches.',
+            'sentence': 'Some monkeys have ________ limbs that can grab onto branches.',
             'answer': 'prehensile',
             'explanation': 'Prehensile means adapted for seizing or grasping, especially by wrapping around.'
         },
@@ -512,11 +485,11 @@ PARAGRAPH_DATA = {
             },
             {
                 'sentences': [
-                    "The Bornean Bristlehead is a rare bird.",
-                    "It lives only in the forests of Borneo.",
-                    "It has black feathers with red and yellow parts.",
-                    "It eats insects from tree bark.",
-                    "Scientists still don't know much about this bird."
+                    "The Collared Kingfisher is a special bird.",
+                    "It lives in the coastal areas of Borneo.",
+                    "It has blue and white feathers.",
+                    "It eats insects, fish, and small crabs.",
+                    "People can often hear its loud call in the morning."
                 ]
             }
         ],
@@ -543,7 +516,7 @@ PARAGRAPH_DATA = {
             },
             {
                 'sentences': [
-                    "The Oriental Dwarf Kingfisher has a remarkable hunting technique.",
+                    "The Kingfisher has a remarkable hunting technique.",
                     "At first, it perches motionless above the water.",
                     "When it spots a fish, it calculates the exact position.",
                     "Then, it dives at high speed into the water.",
@@ -555,7 +528,7 @@ PARAGRAPH_DATA = {
         'hard': [
             {
                 'sentences': [
-                    "The Rhinoceros Hornbill faces several threats in Borneo.",
+                    "The Hornbill faces several threats in Borneo.",
                     "Deforestation is reducing their habitat rapidly; however, conservation efforts are increasing.",
                     "Hunting was once a major problem; nevertheless, new protection laws have helped.",
                     "Climate change is also affecting their food sources; consequently, their breeding success has declined.",
@@ -628,22 +601,22 @@ PARAGRAPH_DATA = {
             },
             {
                 'sentences': [
-                    "Pig-tailed Macaques have distinctive short tails that look like a pig's tail.",
-                    "First, they live in large groups of 15-40 individuals.",
-                    "Then, they establish clear dominance hierarchies within the group.",
-                    "Subsequently, young macaques learn foraging skills from their mothers.",
-                    "Meanwhile, males compete for dominance and mating opportunities.",
-                    "Ultimately, their social structure helps them survive in the forest."
+                    "Macaques are highly intelligent monkeys found in Borneo.",
+                    "First, young macaques learn by watching adults in their group.",
+                    "Then, they practice skills like finding food and building shelters.",
+                    "Subsequently, they develop their place in the group hierarchy.",
+                    "Meanwhile, they form strong bonds with other group members.",
+                    "Eventually, they become fully integrated members of their community."
                 ]
             },
             {
                 'sentences': [
-                    "Bornean gibbons have fascinating communication methods.",
-                    "Each morning, they sing loud songs that echo through the forest.",
-                    "These songs mark their territory for other gibbons.",
-                    "Furthermore, mated pairs sing duets together.",
-                    "Remarkably, their calls can be heard from over a mile away.",
-                    "Scientists study these songs to monitor gibbon populations."
+                    "Red Leaf Monkeys have fascinating communication methods.",
+                    "Each morning, they call to establish their territory.",
+                    "These calls help different groups avoid conflict.",
+                    "Furthermore, they use specific sounds to warn about predators.",
+                    "Remarkably, they have different calls for different threats.",
+                    "Scientists study these calls to understand monkey intelligence."
                 ]
             }
         ],
@@ -694,132 +667,155 @@ WORD_BANK = {
     }
 }
 
-# Welcome Page
-def show_welcome():
-    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Mount_Kinabalu_from_Kampung_Kiau.jpg/1920px-Mount_Kinabalu_from_Kampung_Kiau.jpg", use_container_width=True)
+def set_activity(activity):
+    """Change the current activity in the session state."""
+    st.session_state.current_activity = activity
+
+def choose_pathway(pathway):
+    """Set the learning pathway in the session state."""
+    st.session_state.pathway = pathway
+    st.session_state.species_done = set()
+    st.session_state.current_species_index = 0
+    st.session_state.correct_answers = 0
+    st.session_state.total_questions = 0
+    st.session_state.answer_checked = False
     
+    # Move to identification activity
+    set_activity('identification')
+
+def check_progress():
+    """Calculate the overall progress in the learning journey."""
+    total_activities = 5
+    completed_activities = 0
+    
+    if st.session_state.pathway:
+        completed_activities += 1
+    
+    if len(st.session_state.species_done) == len(SPECIES_DATA[st.session_state.pathway or 'birds']):
+        completed_activities += 1
+        
+    if st.session_state.current_activity == 'vocabulary' and st.session_state.vocab_submitted:
+        completed_activities += 1
+        
+    if st.session_state.current_activity == 'paragraph' and st.session_state.paragraph_attempts > 0:
+        completed_activities += 1
+        
+    if st.session_state.current_activity in ['reflection', 'completion']:
+        completed_activities += 1
+        
+    return completed_activities, total_activities
+
+def show_pathway_selection():
+    """Display the pathway selection screen."""
     st.title("🌴 Borneo Wildlife Explorer 🌴")
     st.markdown("### Welcome to your wildlife learning adventure!")
     
-    st.markdown("""
-    During this activity, you'll learn about the fascinating wildlife of Borneo through:
-    1. 🔍 **Wildlife Identification**
-    2. 📚 **Reading & Comprehension**
-    3. 📝 **Vocabulary Building**
-    4. 🧩 **Paragraph Organization**
-    5. ✏️ **Creative Reflection**
-    """)
-    
-    st.markdown("### Choose your learning pathway:")
-    
-    col1, col2 = st.columns(2)
-    with col1:
+    try:
+        col1, col2 = st.columns([3, 2])
+        with col1:
+            st.image("images/Brahminy_kite.jpg", use_container_width=True)
+            st.image("images/Proboscis_Monkey_in_Borneo.jpg", use_container_width=True)
+        
+        with col2:
+            st.markdown("""
+            During this activity, you'll learn about the fascinating wildlife of Borneo through:
+            1. 🔍 **Wildlife Identification**
+            2. 📚 **Reading & Comprehension**
+            3. 📝 **Vocabulary Building**
+            4. 🧩 **Paragraph Organization**
+            5. ✏️ **Creative Reflection**
+            """)
+            
+            st.markdown("### Choose your learning pathway:")
+            
+            if st.button("🦜 Learn about Birds", use_container_width=True):
+                choose_pathway('birds')
+            
+            if st.button("🐵 Learn about Monkeys", use_container_width=True):
+                choose_pathway('monkeys')
+    except Exception as e:
+        st.error(f"Error loading images: {e}")
+        st.markdown("### Choose your learning pathway:")
+        
         if st.button("🦜 Learn about Birds", use_container_width=True):
             choose_pathway('birds')
-    with col2:
+        
         if st.button("🐵 Learn about Monkeys", use_container_width=True):
             choose_pathway('monkeys')
-    
-    # Display progress if returning
-    if st.session_state.pathway:
-        completed, total = check_progress()
-        st.markdown(f"""
-        <div class="progress-tracker">
-            <h3>Welcome back! Continue your {st.session_state.pathway.title()} adventure</h3>
-            <p>You've completed {completed} out of {total} activities.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Resume button
-        if st.button("Resume My Learning Journey", use_container_width=True):
-            if len(st.session_state.species_done) < len(SPECIES_DATA[st.session_state.pathway]):
-                st.session_state.page = 'identification'
-            elif not st.session_state.comprehension_done:
-                st.session_state.page = 'comprehension'
-            elif not st.session_state.vocab_done:
-                st.session_state.page = 'vocabulary'
-            else:
-                st.session_state.page = 'paragraph'
 
-# Species Identification
 def show_identification():
-    # Get all species that haven't been shown yet
-    available_species = [s for i, s in enumerate(SPECIES_DATA[st.session_state.pathway]) 
-                        if i not in st.session_state.species_done]
-    
-    if not available_species:
-        go_to_page('comprehension')
+    """Display the species identification activity."""
+    if not st.session_state.pathway:
+        set_activity('welcome')
         return
     
-    # Pick a random species
-    species = random.choice(available_species)
-    species_index = SPECIES_DATA[st.session_state.pathway].index(species)
+    if len(st.session_state.species_done) >= len(SPECIES_DATA[st.session_state.pathway]):
+        # All species have been shown, move to next activity
+        set_activity('comprehension')
+        return
+    
+    # Get the current species based on index
+    species_list = SPECIES_DATA[st.session_state.pathway]
+    
+    if st.session_state.current_species_index >= len(species_list):
+        st.session_state.current_species_index = 0
+    
+    species = species_list[st.session_state.current_species_index]
     
     st.title(f"🔍 Identify the {st.session_state.pathway.rstrip('s')}!")
-    st.image(species['image'], use_container_width=True)
+    
+    try:
+        st.image(species['image'], use_container_width=True)
+    except Exception as e:
+        st.error(f"Could not load image ({species['image']}): {e}")
+        st.info("Using placeholder image instead")
+        st.image("https://via.placeholder.com/400x300?text=Wildlife+Image", use_container_width=True)
     
     # Multiple choice options
     answer = st.radio("What species is this?", species['options'], key="species_selection")
     
-   # Split the answer checking and navigation into separate blocks
-if st.button("Check my answer", key="check_answer_btn"):
-    st.session_state.answer_checked = True
-    st.session_state.total_questions += 1
-    
-    if answer == species['name']:
-        st.session_state.correct_answers += 1
-        st.success("✅ Correct! Well done!")
+    # Check answer button
+    if not st.session_state.answer_checked:
+        if st.button("Check my answer", key="check_answer_button"):
+            st.session_state.total_questions += 1
+            st.session_state.answer_checked = True
+            
+            if answer == species['name']:
+                st.session_state.correct_answers += 1
+                st.success("✅ Correct! Well done!")
+            else:
+                st.error(f"❌ Not quite. This is a {species['name']}.")
+            
+            # Add to completed species
+            st.session_state.species_done.add(st.session_state.current_species_index)
+            
+            # Display fact box
+            st.markdown(f"""
+            <div class="fact-box">
+                <h3>📚 Fact about the {species['name']}</h3>
+                <p>{species['fact']}</p>
+            </div>
+            """, unsafe_allow_html=True)
     else:
-        st.error(f"❌ Not quite. This is a {species['name']}.")
-    
-    # Add to completed species
-    if species_index not in st.session_state.species_done:
-        st.session_state.species_done.append(species_index)
-    
-    # Display fact box
-    st.markdown(f"""
-    <div class="fact-box">
-        <h3>📚 Fact about the {species['name']}</h3>
-        <p>{species['fact']}</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# Only show next button after checking answer
-if 'answer_checked' in st.session_state and st.session_state.answer_checked:
-    if st.button("Next", key="next_species_btn"):
-        st.session_state.answer_checked = False
-        next_species()
-        # This forces a rerun to ensure the page changes
-        st.rerun()
-        
-        # Display fact box
-        st.markdown(f"""
-        <div class="fact-box">
-            <h3>📚 Fact about the {species['name']}</h3>
-            <p>{species['fact']}</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Add to completed species
-        if species_index not in st.session_state.species_done:
-            st.session_state.species_done.append(species_index)
-        
         # Next button
-        if st.button("Next"):
-            next_species()
-    
-    # Display progress
-    completed, total = check_progress()
-    st.progress(completed/total)
-    st.text(f"Progress: {completed}/{total} activities completed")
+        if st.button("Next Species", key="next_species_button"):
+            st.session_state.answer_checked = False
+            
+            # Move to the next species that hasn't been shown yet
+            next_index = (st.session_state.current_species_index + 1) % len(species_list)
+            while next_index in st.session_state.species_done and len(st.session_state.species_done) < len(species_list):
+                next_index = (next_index + 1) % len(species_list)
+            
+            st.session_state.current_species_index = next_index
+            st.rerun()
 
-# Comprehension Check
 def show_comprehension():
-    st.title(f"📝 Reading About {st.session_state.pathway.title()}")
+    """Display the reading comprehension activity."""
+    if not st.session_state.pathway:
+        set_activity('welcome')
+        return
     
-    # Initialize comprehension difficulty if not set
-    if 'comprehension_difficulty' not in st.session_state:
-        st.session_state.comprehension_difficulty = 'easy'
+    st.title(f"📝 Reading About {st.session_state.pathway.title()}")
     
     # Difficulty selector
     difficulty = st.select_slider(
@@ -831,9 +827,7 @@ def show_comprehension():
     # Update difficulty if changed
     if difficulty != st.session_state.comprehension_difficulty:
         st.session_state.comprehension_difficulty = difficulty
-        if 'submitted' in st.session_state:
-            st.session_state.submitted = False
-        st.rerun()
+        st.session_state.comprehension_submitted = False
     
     data = COMPREHENSION_DATA[st.session_state.pathway][st.session_state.comprehension_difficulty]
     
@@ -853,7 +847,7 @@ def show_comprehension():
     for i, q in enumerate(data['questions']):
         answer = st.radio(q['question'], q['options'], key=f"comprehension_{i}")
         
-        if 'submitted' in st.session_state and st.session_state.submitted:
+        if st.session_state.comprehension_submitted:
             if answer == q['answer']:
                 st.success("✅ Correct!")
                 correct_answers += 1
@@ -861,9 +855,9 @@ def show_comprehension():
                 st.error(f"❌ The correct answer is: {q['answer']}")
     
     # Submit button
-    if not ('submitted' in st.session_state and st.session_state.submitted):
-        if st.button("Check my answers"):
-            st.session_state.submitted = True
+    if not st.session_state.comprehension_submitted:
+        if st.button("Check my answers", key="check_comprehension"):
+            st.session_state.comprehension_submitted = True
             st.rerun()
     else:
         # Display score with appropriate feedback
@@ -880,18 +874,16 @@ def show_comprehension():
             if difficulty != 'easy':
                 st.info(f"Try the {['easy', 'medium'][difficulty == 'hard']} difficulty to build your skills.")
         
-        if st.button("Continue to Vocabulary Activity"):
-            st.session_state.comprehension_done = True
-            st.session_state.submitted = False
-            go_to_page('vocabulary')
-    
-    # Display progress
-    completed, total = check_progress()
-    st.progress(completed/total)
-    st.text(f"Progress: {completed}/{total} activities completed")
+        if st.button("Continue to Vocabulary Activity", key="to_vocabulary"):
+            st.session_state.comprehension_submitted = False
+            set_activity('vocabulary')
 
-# Vocabulary Activity
 def show_vocabulary():
+    """Display the vocabulary activity."""
+    if not st.session_state.pathway:
+        set_activity('welcome')
+        return
+    
     st.title(f"📝 Vocabulary Challenge: {st.session_state.pathway.title()}")
     
     data = VOCABULARY_DATA[st.session_state.pathway]
@@ -902,25 +894,34 @@ def show_vocabulary():
     """)
     
     # Create text inputs for each sentence
-    answers = []
     for i, item in enumerate(data):
         st.markdown(f"**{i+1}. {item['sentence']}**")
-        answer = st.text_input("", key=f"vocab_{i}")
-        answers.append(answer.strip().lower())
+        key = f"vocab_{i}"
+        
+        # Initialize if not exists
+        if key not in st.session_state.vocabulary_answers:
+            st.session_state.vocabulary_answers[key] = ""
+        
+        st.session_state.vocabulary_answers[key] = st.text_input(
+            "", 
+            value=st.session_state.vocabulary_answers[key],
+            key=key,
+            disabled=st.session_state.vocab_submitted
+        )
     
     # Check answers button
-    if 'vocab_submitted' not in st.session_state:
-        st.session_state.vocab_submitted = False
-    
     if not st.session_state.vocab_submitted:
-        if st.button("Check my answers"):
+        if st.button("Check my answers", key="check_vocab"):
             st.session_state.vocab_submitted = True
             st.rerun()
     else:
         # Display results
         correct_count = 0
-        for i, (answer, item) in enumerate(zip(answers, data)):
-            correct = answer == item['answer'].lower()
+        
+        for i, item in enumerate(data):
+            user_answer = st.session_state.vocabulary_answers[f"vocab_{i}"].strip().lower()
+            correct = user_answer == item['answer'].lower()
+            
             if correct:
                 correct_count += 1
                 st.markdown(f"**{i+1}.** ✅ Correct!")
@@ -931,33 +932,26 @@ def show_vocabulary():
         
         st.markdown(f"**Your score: {correct_count}/{len(data)}**")
         
-        if st.button("Continue to Paragraph Challenge"):
-            st.session_state.vocab_done = True
-            st.session_state.vocab_submitted = False
-            go_to_page('paragraph')
-    
-    # Display progress
-    completed, total = check_progress()
-    st.progress(completed/total)
-    st.text(f"Progress: {completed}/{total} activities completed")
+        if st.button("Continue to Paragraph Challenge", key="to_paragraph"):
+            set_activity('paragraph')
 
-# Paragraph Organization Challenge
 def show_paragraph():
+    """Display the paragraph organization challenge."""
+    if not st.session_state.pathway:
+        set_activity('welcome')
+        return
+    
     st.title("🧩 Paragraph Organization Challenge")
     
     # Choose difficulty level
-    if 'paragraph_level_changed' not in st.session_state:
-        st.session_state.paragraph_level_changed = False
-    
     level = st.selectbox("Select difficulty:", 
                         ["easy", "medium", "hard"], 
                         index=["easy", "medium", "hard"].index(st.session_state.paragraph_level))
     
     if level != st.session_state.paragraph_level:
         st.session_state.paragraph_level = level
-        st.session_state.paragraph_level_changed = True
         st.session_state.paragraph_version = random.randint(0, len(PARAGRAPH_DATA[st.session_state.pathway][level])-1)
-        st.rerun()
+        st.session_state.paragraph_attempts = 0
     
     # Get paragraph data
     paragraph_set = PARAGRAPH_DATA[st.session_state.pathway][level]
@@ -967,50 +961,47 @@ def show_paragraph():
     paragraph = paragraph_set[st.session_state.paragraph_version]
     
     st.markdown("""
-    Arrange these sentences to form a logical paragraph. Drag and drop them in the correct order.
+    Arrange these sentences to form a logical paragraph. Use the "Move Up" and "Move Down" buttons to reorder them.
     """)
     
-    # For this challenge, we'll use shuffled sentences and let users reorder them
-    if 'shuffled_sentences' not in st.session_state or st.session_state.paragraph_level_changed:
+    # Initialize shuffled sentences if needed
+    if 'shuffled_sentences' not in st.session_state or st.session_state.paragraph_attempts == 0:
         st.session_state.shuffled_sentences = paragraph['sentences'].copy()
         random.shuffle(st.session_state.shuffled_sentences)
-        st.session_state.paragraph_level_changed = False
     
-    # Let users reorder sentences
-    ordered_sentences = st.session_state.shuffled_sentences.copy()
-    for i, sentence in enumerate(ordered_sentences):
-        st.text_input(f"Sentence {i+1}", sentence, key=f"sentence_{i}")
-    
-    # In a real app, would use drag and drop, but Streamlit doesn't have native support
-    # So we'll use a simple up/down system
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        sentence_to_move = st.number_input("Select sentence number to move:", 1, len(ordered_sentences), step=1) - 1
-    
-    with col2:
-        direction = st.radio("Move direction:", ["Up", "Down"], horizontal=True)
-    
-    if st.button("Move Sentence"):
-        if direction == "Up" and sentence_to_move > 0:
-            ordered_sentences[sentence_to_move], ordered_sentences[sentence_to_move-1] = ordered_sentences[sentence_to_move-1], ordered_sentences[sentence_to_move]
-        elif direction == "Down" and sentence_to_move < len(ordered_sentences) - 1:
-            ordered_sentences[sentence_to_move], ordered_sentences[sentence_to_move+1] = ordered_sentences[sentence_to_move+1], ordered_sentences[sentence_to_move]
+    # Display each sentence with up/down buttons
+    for i, sentence in enumerate(st.session_state.shuffled_sentences):
+        col1, col2, col3 = st.columns([8, 1, 1])
         
-        st.session_state.shuffled_sentences = ordered_sentences
-        st.rerun()
+        with col1:
+            st.text_input(f"Sentence {i+1}", sentence, key=f"sentence_{i}", disabled=True)
+        
+        with col2:
+            if i > 0:  # Can't move the first sentence up
+                if st.button("⬆️", key=f"up_{i}"):
+                    st.session_state.shuffled_sentences[i], st.session_state.shuffled_sentences[i-1] = \
+                        st.session_state.shuffled_sentences[i-1], st.session_state.shuffled_sentences[i]
+                    st.rerun()
+        
+        with col3:
+            if i < len(st.session_state.shuffled_sentences) - 1:  # Can't move the last sentence down
+                if st.button("⬇️", key=f"down_{i}"):
+                    st.session_state.shuffled_sentences[i], st.session_state.shuffled_sentences[i+1] = \
+                        st.session_state.shuffled_sentences[i+1], st.session_state.shuffled_sentences[i]
+                    st.rerun()
     
     # Check answer
-    if st.button("Check my paragraph"):
-        correct = ordered_sentences == paragraph['sentences']
+    if st.button("Check my paragraph", key="check_paragraph"):
+        correct = st.session_state.shuffled_sentences == paragraph['sentences']
+        st.session_state.paragraph_attempts += 1
+        
         if correct:
             st.success("✅ Perfect! Your paragraph is in the correct order.")
             
-            if st.button("Continue to Reflection"):
-                go_to_page('reflection')
+            if st.button("Continue to Reflection", key="to_reflection"):
+                set_activity('reflection')
         else:
             st.error("❌ Not quite right. The sentences aren't in the correct order yet.")
-            st.session_state.paragraph_attempts += 1
             
             # Give hint after multiple attempts
             if st.session_state.paragraph_attempts >= 2:
@@ -1018,31 +1009,25 @@ def show_paragraph():
             
             # Option to see answer after multiple attempts
             if st.session_state.paragraph_attempts >= 3:
-                if st.button("Show me the correct order"):
+                if st.button("Show me the correct order", key="show_answer"):
                     st.markdown("**Correct paragraph order:**")
                     for i, sentence in enumerate(paragraph['sentences']):
                         st.markdown(f"{i+1}. {sentence}")
-                    
-                    if st.button("Try another paragraph"):
-                        st.session_state.paragraph_version = (st.session_state.paragraph_version + 1) % len(paragraph_set)
-                        st.session_state.paragraph_attempts = 0
-                        del st.session_state.shuffled_sentences
-                        st.rerun()
     
     # Option to try a different paragraph
-    if st.button("Try a different paragraph"):
+    if st.button("Try a different paragraph", key="new_paragraph"):
         st.session_state.paragraph_version = (st.session_state.paragraph_version + 1) % len(paragraph_set)
         st.session_state.paragraph_attempts = 0
-        del st.session_state.shuffled_sentences
+        if 'shuffled_sentences' in st.session_state:
+            del st.session_state.shuffled_sentences
         st.rerun()
-    
-    # Display progress
-    completed, total = check_progress()
-    st.progress(completed/total)
-    st.text(f"Progress: {completed}/{total} activities completed")
 
-# Reflective Writing
 def show_reflection():
+    """Display the reflective writing activity."""
+    if not st.session_state.pathway:
+        set_activity('welcome')
+        return
+    
     st.title("✏️ Reflective Writing")
     
     st.markdown(f"""
@@ -1078,16 +1063,20 @@ def show_reflection():
     """, unsafe_allow_html=True)
     
     # Text area for writing
-    reflection = st.text_area("Your reflection (150 words max):", height=200, key="reflection_text", 
-                             value=st.session_state.reflection)
+    reflection = st.text_area("Your reflection (150 words max):", 
+                              height=200, 
+                              key="reflection_textarea",
+                              value=st.session_state.reflection_text)
+    
+    # Save reflection to session state
+    st.session_state.reflection_text = reflection
     
     # Word count
     word_count = len(reflection.split())
     st.text(f"Word count: {word_count}/150")
     
     # Save button
-    if st.button("Save my reflection"):
-        st.session_state.reflection = reflection
+    if st.button("Save my reflection", key="save_reflection"):
         st.success("Your reflection has been saved!")
     
     # Download button
@@ -1097,38 +1086,46 @@ def show_reflection():
         download_button_str = download_button(download_text, f"my_{st.session_state.pathway}_reflection.txt", "Download my reflection")
         st.markdown(download_button_str, unsafe_allow_html=True)
     
-    if st.button("Complete my learning journey"):
-        go_to_page('completion')
-    
-    # Display progress
-    completed, total = check_progress()
-    st.progress(completed/total)
-    st.text(f"Progress: {completed}/{total} activities completed")
+    if st.button("Complete my learning journey", key="complete_journey"):
+        set_activity('completion')
 
-# Completion page
 def show_completion():
+    """Display the completion page."""
     st.balloons()
     
     st.title("🎉 Congratulations!")
+    
+    if not st.session_state.pathway:
+        st.markdown("You've explored the Borneo Wildlife Explorer app!")
+        if st.button("Start a learning journey", key="start_journey"):
+            set_activity('welcome')
+        return
     
     st.markdown(f"""
     ### You've completed your learning journey about Borneo's {st.session_state.pathway}!
     
     Here's what you accomplished:
     
-    * Identified {len(st.session_state.species_done)} different species
+    * Identified different species of {st.session_state.pathway}
     * Completed reading comprehension and vocabulary activities
     * Organized paragraphs to improve your understanding
-    * Reflected on your own experiences with {st.session_state.pathway}
+    * Reflected on your experiences with {st.session_state.pathway}
     
     Your final score: {st.session_state.correct_answers}/{st.session_state.total_questions} correct answers
     """)
     
-    if st.button("Start a new learning journey"):
+    if st.button("Start a new learning journey", key="new_journey"):
         # Reset state
-        for key in st.session_state.keys():
-            del st.session_state[key]
-        st.session_state.page = 'welcome'
+        st.session_state.pathway = None
+        st.session_state.current_activity = 'welcome'
+        st.session_state.species_done = set()
+        st.session_state.current_species_index = 0
+        st.session_state.correct_answers = 0
+        st.session_state.total_questions = 0
+        st.session_state.answer_checked = False
+        st.session_state.vocab_submitted = False
+        st.session_state.comprehension_submitted = False
+        st.session_state.reflection_text = ""
         st.rerun()
 
 # Helper function for download button
@@ -1142,7 +1139,7 @@ def download_button(object_to_download, download_filename, button_text):
         b64 = base64.b64encode(object_to_download).decode()
 
     button_uuid = str(random.randint(0, 10000))
-    button_id = re.sub('\d+', '', button_uuid)
+    button_id = re.sub(r'\d+', '', button_uuid)
 
     custom_css = f""" 
         <style>
@@ -1167,20 +1164,74 @@ def download_button(object_to_download, download_filename, button_text):
 
 # Main app
 def main():
-    # Display appropriate page based on state
-    if st.session_state.page == 'welcome':
-        show_welcome()
-    elif st.session_state.page == 'identification':
+    # Sidebar navigation
+    st.sidebar.title("Navigation")
+    
+    # Progress information
+    if st.session_state.pathway:
+        st.sidebar.markdown(f"### Learning about: {st.session_state.pathway.title()}")
+        completed, total = check_progress()
+        st.sidebar.progress(completed/total)
+        st.sidebar.markdown(f"**Progress:** {completed}/{total} activities")
+    
+    # Navigation options
+    nav_options = [
+        ('welcome', '🏠 Home'),
+        ('identification', '🔍 Identification'),
+        ('comprehension', '📚 Reading & Comprehension'),
+        ('vocabulary', '📝 Vocabulary Challenge'),
+        ('paragraph', '🧩 Paragraph Organization'),
+        ('reflection', '✏️ Reflective Writing')
+    ]
+    
+    for activity, label in nav_options:
+        # Only enable activities that are available based on progress
+        disabled = False
+        
+        if activity != 'welcome' and not st.session_state.pathway:
+            disabled = True
+        elif activity == 'identification' and st.session_state.pathway:
+            disabled = False
+        elif activity in ['comprehension', 'vocabulary', 'paragraph', 'reflection'] and not st.session_state.species_done:
+            disabled = True
+        
+        # Determine the button style based on whether it's the current activity
+        button_style = "sidebar-nav sidebar-nav-active" if activity == st.session_state.current_activity else "sidebar-nav"
+        
+        # Create the navigation button
+        button_html = f"""
+        <div class="{button_style}" onclick="{'' if disabled else f"window.location.href='#{activity}'"}">
+            {label} {' (locked)' if disabled else ''}
+        </div>
+        """
+        
+        # Only make button clickable if not disabled
+        if not disabled:
+            if st.sidebar.markdown(button_html, unsafe_allow_html=True):
+                set_activity(activity)
+    
+    # Reset button
+    st.sidebar.markdown("---")
+    if st.sidebar.button("Reset Progress", key="reset_progress"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.session_state.current_activity = 'welcome'
+        st.rerun()
+    
+    # Display the appropriate content based on current activity
+    if st.session_state.current_activity == 'welcome':
+        show_pathway_selection()
+    elif st.session_state.current_activity == 'identification':
         show_identification()
-    elif st.session_state.page == 'comprehension':
+    elif st.session_state.current_activity == 'comprehension':
         show_comprehension()
-    elif st.session_state.page == 'vocabulary':
+    elif st.session_state.current_activity == 'vocabulary':
         show_vocabulary()
-    elif st.session_state.page == 'paragraph':
+    elif st.session_state.current_activity == 'paragraph':
         show_paragraph()
-    elif st.session_state.page == 'reflection':
+    elif st.session_state.current_activity == 'reflection':
         show_reflection()
-    elif st.session_state.page == 'completion':
+    elif st.session_state.current_activity == 'completion':
         show_completion()
 
 if __name__ == "__main__":
