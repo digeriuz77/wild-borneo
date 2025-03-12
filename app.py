@@ -797,28 +797,27 @@ def show_identification():
             </div>
             """, unsafe_allow_html=True)
     else:
-
-# Next button
-if st.button("Next Species", key="next_species_button"):
-    st.session_state.answer_checked = False
-    
-    # Check if all species have been shown
-    if len(st.session_state.species_done) >= len(species_list):
-        # All species seen, move to next activity
-        set_activity('comprehension')
-    else:
-        # Find the next species that hasn't been shown yet
-        next_index = (st.session_state.current_species_index + 1) % len(species_list)
-        attempts = 0
-        max_attempts = len(species_list)
-        
-        while next_index in st.session_state.species_done and attempts < max_attempts:
-            next_index = (next_index + 1) % len(species_list)
-            attempts += 1
-        
-        st.session_state.current_species_index = next_index
-    
-    st.rerun()
+        # Next button
+        if st.button("Next Species", key="next_species_button"):
+            st.session_state.answer_checked = False
+            
+            # Check if all species have been shown
+            if len(st.session_state.species_done) >= len(species_list):
+                # All species seen, move to next activity
+                set_activity('comprehension')
+            else:
+                # Find the next species that hasn't been shown yet
+                next_index = (st.session_state.current_species_index + 1) % len(species_list)
+                attempts = 0
+                max_attempts = len(species_list)
+                
+                while next_index in st.session_state.species_done and attempts < max_attempts:
+                    next_index = (next_index + 1) % len(species_list)
+                    attempts += 1
+                
+                st.session_state.current_species_index = next_index
+            
+            st.rerun()
 
 def show_comprehension():
     """Display the reading comprehension activity."""
