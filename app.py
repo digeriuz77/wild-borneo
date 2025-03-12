@@ -808,10 +808,36 @@ def show_comprehension():
         
         # Display the reading passage
         st.markdown("""
-        <div class="wildlife-card">
+        <div class="wildlife-card" style="max-height: 300px; overflow-y: auto; padding-right: 10px;">
             <h3>Reading Passage</h3>
             {}
         </div>
+        <style>
+            /* Custom scrollbar styling */
+            .wildlife-card::-webkit-scrollbar {
+                width: 8px;
+        }
+            .wildlife-card::-webkit-scrollbar-track {
+                background: #f1f1f1;
+                border-radius: 10px;
+        }
+            .wildlife-card::-webkit-scrollbar-thumb {
+                background: #888;
+                border-radius: 10px;
+        }
+            .wildlife-card::-webkit-scrollbar-thumb:hover {
+                background: #555;
+        }
+            /* Adjust for dark mode if active */
+            .dark-mode .wildlife-card::-webkit-scrollbar-track {
+                background: #333;
+        }
+            .dark-mode .wildlife-card::-webkit-scrollbar-thumb {
+                background: #666;
+        }
+            .dark-mode .wildlife-card::-webkit-scrollbar-thumb:hover {
+                background: #888;
+        }
         """.format(data['text']), unsafe_allow_html=True)
         
         # Comprehension questions
