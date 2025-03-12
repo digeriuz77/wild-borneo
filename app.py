@@ -38,6 +38,8 @@ if st.sidebar.button("📚 Reading & Comprehension"):
     st.session_state.active_section = "reading"
 if st.sidebar.button("📝 Grammar Practice"):
     st.session_state.active_section = "grammar"
+if st.sidebar.button("✏️ Reflective Writing"):
+    st.session_state.active_section = "reflection"    
 
 # Display current section
 if st.session_state.active_section == "home":
@@ -48,6 +50,8 @@ elif st.session_state.active_section == "reading":
     import pages.reading as module
 elif st.session_state.active_section == "grammar":
     import pages.grammar as module
+elif st.session_state.active_section == "reflection":
+    import pages.reflection as module
 
 # Add this to app.py
 
