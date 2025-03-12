@@ -116,10 +116,10 @@ def show_reading_speed():
     
     # Instructions
     st.info("""
-    **Test your reading speed with this one-minute challenge!**
+    **Test your reading speed with this two-minute challenge!**
     1. Press "Start Reading" to begin
     2. Click "Next Line" to reveal each new line of text
-    3. Read as many lines as you can in one minute
+    3. Read as many lines as you can in two minutes
     4. Your reading speed will be calculated automatically
     """)
     
@@ -142,7 +142,7 @@ def show_reading_speed():
     # Display timer if active
     if st.session_state.reading_timer_active:
         elapsed_time = datetime.now() - st.session_state.reading_timer_start
-        remaining_time = 60 - elapsed_time.total_seconds()
+        remaining_time = 120 - elapsed_time.total_seconds()  # 2 minutes = 120 seconds
         
         if remaining_time <= 0:
             st.session_state.reading_timer_active = False
@@ -176,7 +176,8 @@ def show_reading_speed():
         st.success(f"Time's up! You read {lines_read} lines containing approximately {words_read} words.")
         
         # Calculate reading speed (words per minute)
-        wpm = words_read
+        # For a 2-minute test, divide by 2 to get the average WPM
+        wpm = words_read // 2
         
         if wpm >= 250:
             st.success(f"Your reading speed: {wpm} words per minute (Advanced)")
@@ -184,3 +185,4 @@ def show_reading_speed():
             st.success(f"Your reading speed: {wpm} words per minute (Average)")
         else:
             st.success(f"Your reading speed: {wpm} words per minute (Developing)")
+
